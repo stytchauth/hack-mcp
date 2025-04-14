@@ -2,10 +2,10 @@
 
 This is a Workers server that composes three functions:
 * A static website built using React and Vite on top of [Worker Assets](https://developers.cloudflare.com/workers/static-assets/)
-* A REST API built using Hono on top of [Workers KV](https://developers.cloudflare.com/kv/) 
+* Per-user API Key secret management backed by [Workers KV](https://developers.cloudflare.com/kv/) 
 * A [Model Context Protocol](https://modelcontextprotocol.io/introduction) Server built using on top of [Workers Durable Objects](https://developers.cloudflare.com/durable-objects/)
 
-User and client identity is managed using [Stytch](https://stytch.com/). Put together, these three features show how to extend a traditional full-stack application for use by an AI agent.
+User and client identity is managed using [Stytch](https://stytch.com/). Put together, these three features show how to wrap an upstream API that uses non-OAuth credentials for consumption by a MCP Client.
 
 This demo uses the [Stytch Consumer](https://stytch.com/b2c) product, which is purpose-built for Consumer SaaS authentication requirements.
 If you are more interested in Stytch's [B2B](https://stytch.com/b2b) product, see [this demo](https://github.com/stytchauth/mcp-stytch-b2b-okr-manager/) instead.
@@ -56,9 +56,16 @@ cp .dev.vars.template .dev.vars
 
 Open `.dev.vars` in the text editor of your choice, and set the environment variables using the `Project ID` and `Secret`  found on [Project Settings](https://stytch.com/dashboard/project-settings?env=test).
 
+Generate an `ENCRYPTION_KEY` with OpenSSL
+```bash
+openssl rand -base64 32
+```
+
 ```
 // This is what a completed .dev.vars file will look like
 STYTCH_PROJECT_ID=project-test-6c20cd16-73d5-44f7-852c-9a7e7b2ccf62
+STYTCH_PROJECT_SECRET=secret-test-KYBDYR8JY2KMKgG8GsGPH6UIJaL1eqANXQ8=
+ENCRYPTION_KEY=hwCuJkgQ8f8JLvWeWVsNBNweujgkDz2lBTpri+Ry0u0=
 ```
 
 ## Running locally
