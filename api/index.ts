@@ -1,17 +1,43 @@
-import {TodoMCP} from "./TodoMCP.ts";
-import {getStytchOAuthEndpointUrl, stytchBearerTokenAuthMiddleware} from "./lib/auth";
-import {TodoAPI} from "./TodoAPI.ts";
+import {WeatherAppMCP} from "./WeatherAppMCP.ts";
+import {
+    getStytchOAuthEndpointUrl,
+    stytchBearerTokenAuthMiddleware,
+    stytchSessionAuthMiddleware
+} from "./lib/auth";
 import {cors} from "hono/cors";
 import {Hono} from "hono";
+import {decryptSecret, encryptSecret} from "./lib/keys.ts";
 
-// Export the TodoMCP class so the Worker runtime can find it
-export {TodoMCP};
+// Export the WeatherAppMCP class so the Worker runtime can find it
+export {WeatherAppMCP};
+
+const SecretManagementAPI = new Hono<{ Bindings: Env }>()
+    .get('/apikey', stytchSessionAuthMiddleware, async (c) => {
+        const encryptedAPIKey = await c.env.API_KEYS.get(c.get('userID'))
+        if (!encryptedAPIKey) return c.json({apiKey: null});
+
+        const decryptedAPIKey = await decryptSecret(c.env, encryptedAPIKey);
+        return c.json({apiKey: decryptedAPIKey});
+    })
+
+    .post('/apikey', stytchSessionAuthMiddleware, async (c) => {
+        const {apiKey} = await c.req.json();
+        if (apiKey === null || apiKey === "") {
+            await c.env.API_KEYS.delete(c.get('userID'));
+        } else {
+            const encryptedAPIKey = await encryptSecret(c.env, apiKey);
+            await c.env.API_KEYS.put(c.get('userID'), encryptedAPIKey);
+        }
+        return c.json({success: true});
+    })
+
+export type App = typeof SecretManagementAPI;
 
 export default new Hono<{ Bindings: Env }>()
     .use(cors())
 
-    // Mount the TODO API underneath us
-    .route('/api', TodoAPI)
+    // Mount the Secret Management API underneath us
+    .route('/api', SecretManagementAPI)
 
     // Serve the OAuth Authorization Server response for Dynamic Client Registration
     .get('/.well-known/oauth-authorization-server', async (c) => {
@@ -33,7 +59,7 @@ export default new Hono<{ Bindings: Env }>()
 
     // Let the MCP Server have a go at handling the request
     .use('/sse/*', stytchBearerTokenAuthMiddleware)
-    .route('/sse', new Hono().mount('/', TodoMCP.mount('/sse').fetch))
+    .route('/sse', new Hono().mount('/', WeatherAppMCP.mount('/sse').fetch))
 
     // Finally - serve static assets from Vite
     .mount('/', (req, env) => env.ASSETS.fetch(req))

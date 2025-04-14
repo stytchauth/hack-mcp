@@ -1,7 +1,7 @@
-import {createRemoteJWKSet, jwtVerify} from "jose";
 import {createMiddleware} from "hono/factory";
 import {HTTPException} from "hono/http-exception";
 import {getCookie} from "hono/cookie";
+import {Client} from "stytch";
 
 /**
  * stytchAuthMiddleware is a Hono middleware that validates that the user is logged in
@@ -16,8 +16,10 @@ export const stytchSessionAuthMiddleware = createMiddleware<{
     const sessionCookie = getCookie(c, 'stytch_session_jwt');
 
     try {
-        const verifyResult = await validateStytchJWT(sessionCookie ?? '', c.env)
-        c.set('userID', verifyResult.payload.sub!);
+        const authRes = await getClient(c.env).sessions.authenticateJwt({
+            session_jwt: sessionCookie ?? '',
+        })
+        c.set('userID', authRes.session.user_id);
     } catch (error) {
         console.error(error);
         throw new HTTPException(401, {message: 'Unauthenticated'})
@@ -41,12 +43,9 @@ export const stytchBearerTokenAuthMiddleware = createMiddleware<{
     const accessToken = authHeader.substring(7);
 
     try {
-        const verifyResult = await validateStytchJWT(accessToken, c.env)
-        // @ts-expect-error Props go brr
-        c.executionCtx.props =  {
-            claims: verifyResult.payload,
-            accessToken,
-        }
+        const tokenRes = await getClient(c.env).idp.introspectTokenLocal(accessToken);
+        // @ts-expect-error executionCtx is untyped
+        c.executionCtx.props = {subject: tokenRes.subject, accessToken,}
     } catch (error) {
         console.error(error);
         throw new HTTPException(401, {message: 'Unauthenticated'})
@@ -55,19 +54,16 @@ export const stytchBearerTokenAuthMiddleware = createMiddleware<{
     await next()
 })
 
-let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+let client: Client | null = null;
 
-async function validateStytchJWT(token: string, env: Env) {
-    if (!jwks) {
-        jwks = createRemoteJWKSet(new URL(getStytchOAuthEndpointUrl(env, '.well-known/jwks.json')))
+function getClient(env: Env): Client {
+    if (!client) {
+        client = new Client({
+            project_id: env.STYTCH_PROJECT_ID,
+            secret: env.STYTCH_PROJECT_SECRET,
+        })
     }
-
-    return await jwtVerify(token, jwks, {
-        audience: env.STYTCH_PROJECT_ID,
-        issuer: [`stytch.com/${env.STYTCH_PROJECT_ID}`],
-        typ: "JWT",
-        algorithms: ['RS256'],
-    })
+    return client
 }
 
 export function getStytchOAuthEndpointUrl(env: Env, endpoint: string): string {

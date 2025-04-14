@@ -51,30 +51,12 @@ button.primary {
 button.primary:hover {
     background-color: rgb(163, 163, 163);
 }
-
-.todoEditor {
-    input[type='text'] {
-        padding: 10px;
-        width: 200px;
-        border-radius: 5px;
-        border: 1px solid #ddd;
-        flex-grow: 1;
-    }
-
-    ul {
-        padding: 0;
-    }
-
-    li {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        min-width: 40vw;
-        margin-bottom: 8px;
-    }
-
-    li button {
-        margin-left: 10px;
-    }
+button.text {
+    font-size: inherit;
+    background-color: transparent;
+    padding: 5px;
+    vertical-align: middle;
+    display: inline-flex;
+    align-items: center;
 }
 

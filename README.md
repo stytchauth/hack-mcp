@@ -1,4 +1,4 @@
-# Workers + Stytch TODO App MCP Server
+# Workers + Stytch API Key MCP Server
 
 This is a Workers server that composes three functions:
 * A static website built using React and Vite on top of [Worker Assets](https://developers.cloudflare.com/workers/static-assets/)
@@ -30,8 +30,8 @@ Follow the steps below to get this application fully functional and running usin
 In your terminal clone the project and install dependencies:
 
 ```bash
-git clone https://github.com/stytchauth/mcp-stytch-consumer-todo-list.git
-cd mcp-stytch-consumer-todo-list
+git clone https://github.com/stytchauth/mcp-stytch-api-key.git
+cd mcp-stytch-api-key
 npm i
 ```
 
@@ -80,14 +80,14 @@ npx @modelcontextprotocol/inspector@latest
 
 Click the button - **you'll need to configure environment variables after the initial deployment**. 
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/stytchauth/mcp-stytch-consumer-todo-list.git)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/stytchauth/mcp-stytch-api-key.git)
 
 Or, if you want to follow the steps by hand: 
 
-1. Create a KV namespace for the TODO app to use
+1. Create a KV namespace for the MCP Server to use
 
 ```
-wrangler kv namespace create TODOS
+wrangler kv namespace create API_KEYS
 ```
 
 2. Update the KV namespace ID in `wrangler.jsonc` with the ID you received:
@@ -95,7 +95,7 @@ wrangler kv namespace create TODOS
 ```
 "kv_namespaces": [
    {
-      "binding": "TODOS",
+      "binding": "API_KEYS",
       "id": "your-kv-namespace-id"
    }
 ]
@@ -114,9 +114,9 @@ npx wrangler secret bulk .dev.vars
 npm run deploy
 ```
 
-5. Grant your deployment access to your Stytch project. Assuming your Stytch project was deployed at `https://mcp-stytch-consumer-todo-list.$YOUR_ACCOUNT_NAME.workers.dev`:
-   1. Add `https://mcp-stytch-consumer-todo-list.$YOUR_ACCOUNT_NAME.workers.dev/authenticate` as an allowed [Redirect URL](https://stytch.com/dashboard/redirect-urls?env=test)
-   2. Add `https://mcp-stytch-consumer-todo-list.$YOUR_ACCOUNT_NAME.workers.dev` as an allowed Authorized Application in the [Frontend SDKs](https://stytch.com/dashboard/sdk-configuration?env=test) configuration
+5. Grant your deployment access to your Stytch project. Assuming your Stytch project was deployed at `https://mcp-stytch-api-key.$YOUR_ACCOUNT_NAME.workers.dev`:
+   1. Add `https://mcp-stytch-api-key.$YOUR_ACCOUNT_NAME.workers.dev/authenticate` as an allowed [Redirect URL](https://stytch.com/dashboard/redirect-urls?env=test)
+   2. Add `https://mcp-stytch-api-key.$YOUR_ACCOUNT_NAME.workers.dev` as an allowed Authorized Application in the [Frontend SDKs](https://stytch.com/dashboard/sdk-configuration?env=test) configuration
 
 ## Get help and join the community
 

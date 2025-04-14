@@ -4,7 +4,7 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "mcp-stytch-consumer-todo-list",
+	"name": "mcp-stytch-api-key",
 	"main": "api/index.ts",
 	"compatibility_flags": ["nodejs_compat"],
 	"compatibility_date": "2025-03-19",
@@ -29,21 +29,21 @@
 		{
 			"tag": "v1",
 			"new_sqlite_classes": [
-				"TodoMCP"
+				"WeatherAppMCP"
 			]
 		}
 	],
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "TodoMCP",
+				"class_name": "WeatherAppMCP",
 				"name": "MCP_OBJECT"
 			}
 		]
 	},
 	"kv_namespaces": [
 		{
-			"binding": "TODOS",
+			"binding": "API_KEYS",
 			"id": "8579799313be4e2aa06445981011b13e"
 		}
 	],

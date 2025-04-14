@@ -1,5 +1,5 @@
 import {OAuthProviders, OTPMethods, Products, StytchEvent, StytchLoginConfig} from "@stytch/vanilla-js";
-import {IdentityProvider, StytchLogin, useStytch, useStytchUser} from "@stytch/react";
+import {StytchLogin, useStytch, useStytchUser} from "@stytch/react";
 import {useEffect, useMemo} from "react";
 
 /**
@@ -13,6 +13,7 @@ export const withLoginRequired = (Component: React.FC) => () => {
     useEffect(() => {
         if (!user && !fromCache) {
             localStorage.setItem('returnTo', window.location.href);
+            console.log('loginRequred', {returnTo: window.location.href});
             window.location.href = '/login';
         }
     }, [user, fromCache])
@@ -29,15 +30,15 @@ export const withLoginRequired = (Component: React.FC) => () => {
  * Behavior:
  * - Checks for a `returnTo` entry in local storage to determine the redirection target.
  * - If `returnTo` exists, clears its value from local storage and navigates to the specified URL.
- * - If `returnTo` does not exist, redirects the user to the default '/todoapp' location.
+ * - If `returnTo` does not exist, redirects the user to the default '/apikey' location.
  */
 const onLoginComplete = () => {
     const returnTo = localStorage.getItem('returnTo')
+    console.log('onLoginComplete', {returnTo});
     if (returnTo) {
-        localStorage.setItem('returnTo', '');
         window.location.href = returnTo;
     } else {
-        window.location.href = '/todoapp';
+        window.location.href = '/apikey';
     }
 }
 
@@ -70,14 +71,6 @@ export function Login() {
 }
 
 /**
- * The OAuth Authorization page implementation. Wraps the Stytch IdentityProvider UI component.
- * View all configuration options at https://stytch.com/docs/sdks/idp-ui-configuration
- */
-export const Authorize = withLoginRequired(function () {
-    return <IdentityProvider/>
-})
-
-/**
  * The Authentication callback page implementation. Handles completing the login flow after OAuth
  */
 export function Authenticate() {
@@ -103,9 +96,9 @@ export const Logout = function () {
     const stytch = useStytch()
     const {user} = useStytchUser()
 
-    if(!user) return null;
+    if (!user) return null;
 
     return (
-        <button className="primary" onClick={() => stytch.session.revoke()}> Log Out </button>
+        <button onClick={() => stytch.session.revoke()}> Log Out </button>
     )
 }

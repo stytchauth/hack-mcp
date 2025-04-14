@@ -1,0 +1,10 @@
+.api-key-input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+}
+.submit-container {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+}
