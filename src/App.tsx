@@ -14,7 +14,7 @@ function App() {
         <StytchProvider stytch={stytch}>
             <APIKeyProvider>
                 <main>
-                    <h1>API Key Auth MCP Demo</h1>
+                    <h1>Stytch MCP Demo</h1>
                     <Router>
                         <Routes>
                             <Route path="/oauth/authorize" element={<OAuthAuthorize/>}/>

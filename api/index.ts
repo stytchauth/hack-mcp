@@ -13,20 +13,25 @@ export {WeatherAppMCP};
 
 const SecretManagementAPI = new Hono<{ Bindings: Env }>()
     .get('/apikey', stytchSessionAuthMiddleware, async (c) => {
-        const encryptedAPIKey = await c.env.API_KEYS.get(c.get('userID'))
-        if (!encryptedAPIKey) return c.json({apiKey: null});
+        const encryptedProjectID = await c.env.API_KEYS.get(c.get('userID')+"projectID");
+        const encryptedSecret = await c.env.API_KEYS.get(c.get('userID')+"secret");
+        if (!encryptedProjectID || !encryptedSecret) return c.json({projectID: null, secret: null});
 
-        const decryptedAPIKey = await decryptSecret(c.env, encryptedAPIKey);
-        return c.json({apiKey: decryptedAPIKey});
+        const decryptedProjectID = await decryptSecret(c.env, encryptedProjectID);
+        const decryptedSecret = await decryptSecret(c.env, encryptedSecret);
+        return c.json({projectID: decryptedProjectID, secret: decryptedSecret});
     })
 
     .post('/apikey', stytchSessionAuthMiddleware, async (c) => {
-        const {apiKey} = await c.req.json();
-        if (apiKey === null || apiKey === "") {
-            await c.env.API_KEYS.delete(c.get('userID'));
+        const {projectID, secret} = await c.req.json();
+        if (projectID === null || secret === "" || projectID === "" || secret === null) {
+            await c.env.API_KEYS.delete(c.get('userID')+"projectID");
+            await c.env.API_KEYS.delete(c.get('userID')+"secret");
         } else {
-            const encryptedAPIKey = await encryptSecret(c.env, apiKey);
-            await c.env.API_KEYS.put(c.get('userID'), encryptedAPIKey);
+            const encryptedProjectID = await encryptSecret(c.env, projectID);
+            const encryptedSecret = await encryptSecret(c.env, secret);
+            await c.env.API_KEYS.put(c.get('userID')+"projectID", encryptedProjectID);
+            await c.env.API_KEYS.put(c.get('userID')+"secret", encryptedSecret);
         }
         return c.json({success: true});
     })
