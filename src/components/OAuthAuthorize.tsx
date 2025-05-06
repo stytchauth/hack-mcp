@@ -16,7 +16,7 @@ export const OAuthAuthorize = withLoginRequired(function () {
 
     // If no API Key has been registered, make the user register one before permitting
     // the OAuth flow to continue
-    if (!state.apiKey) {
+    if (!state.projectID || !state.secret) {
         return (
             <>
                 <APIKeyForm/>
