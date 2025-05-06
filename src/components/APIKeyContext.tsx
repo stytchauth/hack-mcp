@@ -6,20 +6,21 @@ import {useStytchUser} from "@stytch/react";
 const client = hc<App>(`${window.location.origin}/api`);
 
 type State = {
-    apiKey: string | null;
+    projectID: string | null;
+    secret: string | null;
     status: 'idle' | 'loading' | 'success' | 'error';
     error?: string;
 };
 
 type Action =
-    | { type: 'SET_API_KEY'; payload: string | null }
+    | { type: 'SET_API_KEY'; projectID: string | null, secret: string | null }
     | { type: 'LOADING' }
     | { type: 'SUCCESS' }
     | { type: 'ERROR'; payload: string };
 
 type APIKeyContextType = {
     state: State;
-    setAPIKey: (apiKey: string) => Promise<void>;
+    setAPIKey: (projectID: string, secret: string) => Promise<void>;
 };
 
 const APIKeyContext = createContext<APIKeyContextType | null>(null);
@@ -27,7 +28,7 @@ const APIKeyContext = createContext<APIKeyContextType | null>(null);
 function reducer(state: State, action: Action): State {
     switch (action.type) {
         case 'SET_API_KEY':
-            return {...state, status: 'idle', apiKey: action.payload};
+            return {...state, status: 'idle', projectID: action.projectID, secret: action.secret};
         case 'LOADING':
             return {...state, status: 'loading'};
         case 'SUCCESS':
@@ -42,7 +43,8 @@ function reducer(state: State, action: Action): State {
 export function APIKeyProvider({children}: { children: ReactNode }) {
     const {user} = useStytchUser();
     const [state, dispatch] = useReducer(reducer, {
-        apiKey: null,
+        projectID: null,
+        secret: null,
         status: 'idle'
     });
 
@@ -51,17 +53,17 @@ export function APIKeyProvider({children}: { children: ReactNode }) {
         try {
             const response = await client.apikey.$get();
             const data = await response.json();
-            dispatch({type: 'SET_API_KEY', payload: data.apiKey});
+            dispatch({type: 'SET_API_KEY', projectID: data.projectID, secret: data.secret});
         } catch (error) {
             dispatch({type: 'ERROR', payload: error instanceof Error ? error.message : 'Failed to fetch API key'});
         }
     };
 
-    const setAPIKey = async (apiKey: string) => {
+    const setAPIKey = async (projectID: string, secret: string) => {
         dispatch({type: 'LOADING'});
         try {
-            await client.apikey.$post({json: {apiKey}});
-            dispatch({type: 'SET_API_KEY', payload: apiKey});
+            await client.apikey.$post({json: {projectID, secret}});
+            dispatch({type: 'SET_API_KEY', projectID: projectID, secret: secret});
             dispatch({type: 'SUCCESS'});
         } catch (error) {
             dispatch({type: 'ERROR', payload: error instanceof Error ? error.message : 'Failed to save API key'});

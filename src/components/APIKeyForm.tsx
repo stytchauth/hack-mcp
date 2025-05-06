@@ -11,7 +11,7 @@ export const APIKeyForm = withLoginRequired(() => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const formData = new FormData(e.target as HTMLFormElement);
-        void setAPIKey(formData.get('api-key') as string);
+        void setAPIKey(formData.get('project-id') as string, formData.get('secret') as string);
     };
 
     const [infoModalOpen, setInfoModalOpen] = useState(() => {
@@ -23,24 +23,31 @@ export const APIKeyForm = withLoginRequired(() => {
         setInfoModalOpen(false);
     }
 
-
     return (
         <>
             <h2>
-                Save API Key{' '}
+                Save your Stytch Project ID and Secret{' '}
                 <button className="text" onClick={() => setInfoModalOpen(true)}>ℹ️</button>
             </h2>
             <form onSubmit={handleSubmit}>
                 <p>
-                    Find your API Key in the{' '}
-                    <NavLink to="https://www.weatherapi.com/my/" target="_blank">WeatherAPI Dashboard</NavLink>.
+                    Find your credentials in the{' '}
+                    <NavLink to="https://stytch.com/dashboard" target="_blank">Stytch Dashboard</NavLink>.
                 </p>
                 <input
                     className="api-key-input"
-                    name="api-key"
+                    name="project-id"
                     type="text"
-                    defaultValue={state.apiKey ?? ''}
-                    placeholder="Enter your API key here"
+                    defaultValue={state.projectID ?? ''}
+                    placeholder="Enter your project ID here"
+                    disabled={state.status === 'loading'}
+                />
+                <input
+                    className="api-key-input"
+                    name="secret"
+                    type="text"
+                    defaultValue={state.secret ?? ''}
+                    placeholder="Enter your secret here"
                     disabled={state.status === 'loading'}
                 />
                 <div className="submit-container">
@@ -49,7 +56,7 @@ export const APIKeyForm = withLoginRequired(() => {
                         type="submit"
                         disabled={state.status === 'loading'}
                     >
-                        {state.status === 'loading' ? 'Saving...' : 'Save API Key'}
+                        {state.status === 'loading' ? 'Saving...' : 'Save Stytch Credentials'}
                     </button>
                 </div>
             </form>
@@ -57,8 +64,8 @@ export const APIKeyForm = withLoginRequired(() => {
                 <p>{state.error}</p>
             )}
             {state.status === 'success' && (
-                state.apiKey ?
-                    <p>API key <code>`{state.apiKey}`</code> saved successfully</p> :
+                state.projectID ?
+                    <p>Project ID & secret saved successfully</p> :
                     <p>Empty API Key saved successfully.</p>
             )}
             <Modal isOpen={infoModalOpen} onClose={onInfoModalClose}>
