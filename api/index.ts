@@ -46,10 +46,12 @@ export default new Hono<{ Bindings: Env }>()
 
     // Serve the OAuth Authorization Server response for Dynamic Client Registration
     .get('/.well-known/oauth-authorization-server', async (c) => {
+      const u = new URL('https://stytch.com/oauth/authorize');
+      u.searchParams.set('scope', 'openid email profile admin:projects manage:api_keys manage:api_keys:test manage:project_settings manage:project_data')
         return c.json({
             issuer: c.env.STYTCH_PROJECT_ID,
             // Link to the OAuth Authorization screen implemented within the React UI
-            authorization_endpoint: `https://stytch.com/oauth/authorize`,
+            authorization_endpoint: u.toString(),
             token_endpoint: getStytchOAuthEndpointUrl(c.env, 'oauth2/token'),
             registration_endpoint: getStytchOAuthEndpointUrl(c.env, 'oauth2/register'),
             scopes_supported: ['openid', 'profile', 'email', 'offline_access'],
