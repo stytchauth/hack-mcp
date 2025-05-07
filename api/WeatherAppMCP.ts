@@ -3,7 +3,7 @@ import { McpAgent } from "agents/mcp";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { getStytchOAuthEndpointUrl } from "./lib/auth.ts";
-import {decryptSecret, encryptSecret} from "./lib/keys.ts";
+import { decryptSecret, encryptSecret } from "./lib/keys.ts";
 
 type AuthenticationContext = {
     subject: string,
@@ -198,26 +198,6 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             return this.formatResponse(memberAPIKeys);
         })
 
-        server.tool('sendTestEmail', 'Sends a test email to the email address specified in the email template.', { ...SendTestEmailTemplateBody }, async ({...sendTestEmailTemplateBody}) => {
-            const { projectId, secret } = await this.fetchProjectCredentials();
-            console.log(`projectId: ${projectId}, secret: ${secret}`)
-            const response = await fetch(`https://stytch.com/web/projects/${sendTestEmailTemplateBody.testProjectId}/send_test_email`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // 'Cookie': 'stytch_b2b_session=TKTK; stytch_b2b_session_jwt=TKTK'
-                },
-                body: JSON.stringify({
-                    ...sendTestEmailTemplateBody,
-                })
-            })
-            if (!response.ok) {
-                throw new HTTPException(400, {message: `Error sending test email: ${response.statusText} - ${await response.text()}`})
-            }
-            const emailTemplateResp = await response.json() as { email_template_id: string }
-            return this.formatResponse(`Email template created for ${sendTestEmailTemplateBody.testProjectId}. Email template id: ${emailTemplateResp.email_template_id}`)
-        })
-
         server.tool('createEmailTemplate', 'Creates an customer email template for the project.', {
             liveProjectId: z.string(),
             ...emailTemplateOptions
@@ -240,29 +220,6 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             }
             const emailTemplate = await response.json() as { email_template_id: string }
             return this.formatResponse(`Email template created for ${projectId}. Email template id: ${emailTemplate.email_template_id}`)
-        })
-
-        server.tool('getCurrentWeather', 'Gets the current weather conditions at the requested location', {locationName: z.string()}, async ({locationName}) => {
-            const key = await this.env.API_KEYS.get(this.props.subject);
-            if(!key) {
-                // TODO: MCP Server catches this and wraps it to a tool call result
-                // So 401 does not trigger re-authentication
-                // Need to teach MCP Server Core how to return a real 401 from a tool response
-                throw new HTTPException(401, {message: 'Unauthenticated'})
-            }
-
-            const url = new URL('https://api.weatherapi.com/v1/current.json')
-            url.searchParams.append('key', await decryptSecret(this.env, key))
-            url.searchParams.append('q', locationName)
-
-            const weatherRes = await fetch(url)
-            if (weatherRes.status !== 200) {
-                throw Error(`Error fetching weather: ${weatherRes.statusText} - ${await weatherRes.text()}`)
-            }
-
-            const weatherJSON = await weatherRes.json() as { current: { temp_f: string } }
-
-            return this.formatResponse(`Current temperature in ${locationName} is: ${weatherJSON.current.temp_f} degrees Fahrenheit`)
         })
 
         server.tool('sendMagicLink', 'Sends a magic link to a user\'s email address', {
