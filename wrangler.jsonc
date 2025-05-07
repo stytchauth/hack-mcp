@@ -45,6 +45,10 @@
 		{
 			"binding": "API_KEYS",
 			"id": "6f4385be905a4635b758ab931d802755"
+		},
+		{
+			"binding": "MEMBER_API_KEYS",
+			"id": "3c2dc82c6f7147c08d9fd187e965a5a9"
 		}
 	],
 	/**
