@@ -1,6 +1,6 @@
-import {OAuthProviders, OTPMethods, Products, StytchEvent, StytchLoginConfig} from "@stytch/vanilla-js";
-import {StytchLogin, useStytch, useStytchUser} from "@stytch/react";
-import {useEffect, useMemo} from "react";
+import { StytchB2B, useStytchB2BClient, useStytchMember } from "@stytch/react/b2b";
+import { AuthFlowType, B2BOAuthProviders, B2BProducts, StytchB2BUIConfig, StytchEvent } from "@stytch/vanilla-js";
+import { useEffect, useMemo } from "react";
 
 /**
  * A higher-order component that enforces a login requirement for the wrapped component.
@@ -8,17 +8,17 @@ import {useEffect, useMemo} from "react";
  * current URL is stored in localStorage to enable return after authentication.
  */
 export const withLoginRequired = (Component: React.FC) => () => {
-    const {user, fromCache} = useStytchUser()
+    const {member, fromCache} = useStytchMember()
 
     useEffect(() => {
-        if (!user && !fromCache) {
+        if (!member && !fromCache) {
             localStorage.setItem('returnTo', window.location.href);
             console.log('loginRequred', {returnTo: window.location.href});
             window.location.href = '/login';
         }
-    }, [user, fromCache])
+    }, [member, fromCache])
 
-    if (!user) {
+    if (!member) {
         return null
     }
     return <Component/>
@@ -43,21 +43,17 @@ const onLoginComplete = () => {
 }
 
 /**
- * The Login page implementation. Wraps the StytchLogin UI component.
+ * The Discovery/Login page implementation. Wraps the StytchLogin UI component.
  * View all configuration options at https://stytch.com/docs/sdks/ui-configuration
  */
-export function Login() {
-    const loginConfig = useMemo<StytchLoginConfig>(() => ({
-        products: [Products.otp, Products.oauth],
-        otpOptions: {
-            expirationMinutes: 10,
-            methods: [OTPMethods.Email],
-        },
+export function Discovery() {
+    const config = useMemo<StytchB2BUIConfig>(() => ({
+        products: [B2BProducts.emailMagicLinks, B2BProducts.oauth],
+        sessionOptions: { sessionDurationMinutes: 60 },
         oauthOptions: {
-            providers: [{type: OAuthProviders.Google}],
-            loginRedirectURL: window.location.origin + '/authenticate',
-            signupRedirectURL: window.location.origin + '/authenticate',
-        }
+          providers: [{ type: B2BOAuthProviders.Google }],
+        },
+        authFlowType: AuthFlowType.Discovery,
     }), [])
 
     const handleOnLoginComplete = (evt: StytchEvent) => {
@@ -66,7 +62,7 @@ export function Login() {
     }
 
     return (
-        <StytchLogin config={loginConfig} callbacks={{onEvent: handleOnLoginComplete}}/>
+        <StytchB2B config={config} callbacks={{onEvent: handleOnLoginComplete}}/>
     )
 }
 
@@ -74,15 +70,16 @@ export function Login() {
  * The Authentication callback page implementation. Handles completing the login flow after OAuth
  */
 export function Authenticate() {
-    const client = useStytch();
+    const client = useStytchB2BClient();
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const token = params.get('token');
-        if (!token) return;
+        const token = params.get('stytch_token_type');
+        if (!token) return; 
 
-        client.oauth.authenticate(token, {session_duration_minutes: 60})
-            .then(onLoginComplete)
+        client.magicLinks.discovery.authenticate({
+            discovery_magic_links_token: token,
+        }).then(onLoginComplete)
     }, [client]);
 
     return (
@@ -93,10 +90,10 @@ export function Authenticate() {
 }
 
 export const Logout = function () {
-    const stytch = useStytch()
-    const {user} = useStytchUser()
+    const stytch = useStytchB2BClient()
+    const {member} = useStytchMember()
 
-    if (!user) return null;
+    if (!member) return null;
 
     return (
         <button onClick={() => stytch.session.revoke()}> Log Out </button>

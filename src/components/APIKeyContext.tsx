@@ -1,7 +1,7 @@
-import {hc} from "hono/client";
-import type {App} from "../../api";
-import {createContext, ReactNode, useContext, useEffect, useReducer} from "react";
-import {useStytchUser} from "@stytch/react";
+import { useStytchMember } from "@stytch/react/b2b";
+import { hc } from "hono/client";
+import { createContext, ReactNode, useContext, useEffect, useReducer } from "react";
+import type { App } from "../../api";
 
 const client = hc<App>(`${window.location.origin}/api`);
 
@@ -41,7 +41,7 @@ function reducer(state: State, action: Action): State {
 }
 
 export function APIKeyProvider({children}: { children: ReactNode }) {
-    const {user} = useStytchUser();
+    const {member} = useStytchMember();
     const [state, dispatch] = useReducer(reducer, {
         projectID: null,
         secret: null,
@@ -72,10 +72,10 @@ export function APIKeyProvider({children}: { children: ReactNode }) {
 
     // Load the user's current configured API Key
     useEffect(() => {
-        if (user?.user_id) {
+        if (member?.member_id) {
             getAPIKey()
         }
-    }, [user?.user_id]);
+    }, [member?.member_id]);
 
     return (
         <APIKeyContext.Provider value={{state, setAPIKey}}>
