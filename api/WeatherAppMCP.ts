@@ -44,7 +44,7 @@ const emailTemplateOptions = {
     plaintextContent: z.string().optional(),
   };
 
-  export const SendTestEmailTemplateBody = {
+export const SendTestEmailTemplateBody = {
     ...emailTemplateOptions,
     testProjectId: z.string(),
     method: z.string().optional(),
@@ -53,7 +53,17 @@ const emailTemplateOptions = {
     toAddress: z.string(),
     templateType: z.string().default('login'),
     useSecondarySubject: z.boolean().optional(),
-  }
+}
+
+export const LoginOrCreateEmailOTPBody = {
+    email: z.string(),
+    expiration_minutes: z.number().min(1).max(60).optional(),
+    login_template_id: z.string().optional(),
+    signup_template_id: z.string().optional(),
+    locale: z.string().optional(),
+    create_user_as_pending: z.boolean().optional(),
+    attributes: z.record(z.unknown()).optional(),
+}
 
 export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext> {
     async init() {
@@ -214,6 +224,25 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
 
             const result = await response.json() as { request_id: string };
             return this.formatResponse(`Magic link sent successfully to ${params.email}. Request ID: ${result.request_id}`);
+        })
+
+        server.tool('LoginOrCreateEmailOTP', 'Sends an email one time passcode to the specified email', {...LoginOrCreateEmailOTPBody}, async ({...loginOrCreateEmailOTPBody}) => {
+            const { projectId, secret } = await this.fetchProjectCredentials();
+            const response = await fetch(`https://test.stytch.com/v1/otps/email/login_or_create`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Basic ${btoa(`${projectId}:${secret}`)}`
+                },
+                body: JSON.stringify({
+                    ...loginOrCreateEmailOTPBody,
+                })
+            })
+            if (!response.ok) {
+                throw new HTTPException(400, {message: `Error sending email OTP: ${response.statusText} - ${await response.text()}`})
+            }
+            const loginOrCreateEmailOTPResp = await response.json() as { user_id: string, email_id: string }
+            return this.formatResponse(`Email OTP sent. Email id: ${loginOrCreateEmailOTPResp.email_id}`)
         })
 
         return server
