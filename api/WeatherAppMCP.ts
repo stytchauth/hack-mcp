@@ -69,15 +69,44 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     async init() {
     }
 
-    // @ts-ignore
     async createSecret(projectID: string): Promise<string> {
-        // TODO call PWA to create secret
-        return "secret-123";
+        const response = await fetch(`https://management.stytch.com/v1/projects/${projectID}/secrets`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + this.props.accessToken,
+            },
+        })
+        if (!response.ok) {
+            throw new HTTPException(400, {message: `Error creating secret: ${response.statusText} - ${await response.text()}`})
+        }
+        const createProjectResp = await response.json() as { created_secret: { secret: string } }
+        if (!createProjectResp.created_secret) {
+            throw new HTTPException(400, {message: `Secret response was null`})
+        }
+        return createProjectResp.created_secret.secret;
     }
 
     async createProject(): Promise<string> {
-        // TODO call PWA to create project
-        return "project-123";
+        const response = await fetch(`https://management.stytch.com/v1/projects`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': this.props.accessToken,
+            },
+            body: JSON.stringify({
+                project_name: 'My Test Project',
+                vertical: 'CONSUMER',
+            })
+        })
+        if (!response.ok) {
+            throw new HTTPException(400, {message: `Error creating project: ${response.statusText} - ${await response.text()}`})
+        }
+        const createProjectResp = await response.json() as { project: { live_project_id: string } }
+        if (!createProjectResp.project) {
+            throw new HTTPException(400, {message: `Project response was null`})
+        }
+        return createProjectResp.project.live_project_id;
     }
 
     async getOrSetProjectID(projectID: string | null): Promise<{ projectID: string; secret: string; apiBaseURL: string }> {
