@@ -10,6 +10,22 @@ type AuthenticationContext = {
     accessToken: string,
 }
 
+const sendMagicLinkParams = {
+    email: z.string().email(),
+    login_magic_link_url: z.string().url().optional(),
+    signup_magic_link_url: z.string().url().optional(),
+    login_expiration_minutes: z.number().min(1).max(60).optional(),
+    signup_expiration_minutes: z.number().min(1).max(60).optional(),
+    login_template_id: z.string().optional(),
+    signup_template_id: z.string().optional(),
+    locale: z.string().optional(),
+    attributes: z.record(z.unknown()).optional(),
+    code_challenge: z.string().optional(),
+    user_id: z.string().optional(),
+    session_token: z.string().optional(),
+    session_jwt: z.string().optional(),
+}
+
 const emailTemplateOptions = {
     name: z.string(),
     buttonColor: z.string().optional().default('#106ee9'),
@@ -39,14 +55,24 @@ const emailTemplateOptions = {
     useSecondarySubject: z.boolean().optional(),
   }
 
-/**
- * The `WeatherAppMCP` class exposes the https://www.weatherapi.com/ API
- * for consumption by AI Agents via the MCP Protocol
- */
 export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext> {
     async init() {
     }
 
+    async fetchProjectCredentials(): Promise<{ projectId: string; secret: string }> {
+        const project_id = await this.env.API_KEYS.get(this.props.subject + 'projectID');
+        const secret = await this.env.API_KEYS.get(this.props.subject + 'secret');
+        if (!project_id || !secret) {
+            throw new HTTPException(401, { message: 'Unauthenticated' });
+        }
+
+        const decryptedSecret = await decryptSecret(this.env, secret);
+        const decryptedProjectId = await decryptSecret(this.env, project_id);
+        return {
+            projectId: decryptedProjectId,
+            secret: decryptedSecret
+        }
+    }
 
     formatResponse = (description: string): {
         content: Array<{ type: 'text', text: string }>
@@ -99,6 +125,8 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         });
 
         server.tool('sendTestEmail', 'Sends a test email to the email address specified in the email template.', { ...SendTestEmailTemplateBody }, async ({...sendTestEmailTemplateBody}) => {
+            const { projectId, secret } = await this.fetchProjectCredentials();
+            console.log(`projectId: ${projectId}, secret: ${secret}`)
             const response = await fetch(`https://stytch.com/web/projects/${sendTestEmailTemplateBody.testProjectId}/send_test_email`, {
                 method: 'POST',
                 headers: {
@@ -119,8 +147,9 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         server.tool('createEmailTemplate', 'Creates an customer email template for the project.', {
             liveProjectId: z.string(),
             ...emailTemplateOptions
-        }, async ({liveProjectId, ...emailTemplateOptions}) => {
-            const response = await fetch(`https://management.stytch.com/v1/projects/${liveProjectId}/email_templates`, {
+        }, async ({ ...emailTemplateOptions}) => {
+            const { projectId, } = await this.fetchProjectCredentials();
+            const response = await fetch(`https://management.stytch.com/v1/projects/${projectId}/email_templates`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -136,7 +165,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
                 throw new HTTPException(400, {message: `Error creating email template: ${response.statusText} - ${await response.text()}`})
             }
             const emailTemplate = await response.json() as { email_template_id: string }
-            return this.formatResponse(`Email template created for ${liveProjectId}. Email template id: ${emailTemplate.email_template_id}`)
+            return this.formatResponse(`Email template created for ${projectId}. Email template id: ${emailTemplate.email_template_id}`)
         })
 
         server.tool('getCurrentWeather', 'Gets the current weather conditions at the requested location', {locationName: z.string()}, async ({locationName}) => {
@@ -160,6 +189,31 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             const weatherJSON = await weatherRes.json() as { current: { temp_f: string } }
 
             return this.formatResponse(`Current temperature in ${locationName} is: ${weatherJSON.current.temp_f} degrees Fahrenheit`)
+        })
+
+        server.tool('sendMagicLink', 'Sends a magic link to a user\'s email address', {
+            ...sendMagicLinkParams
+        }, async (params) => {
+            const { projectId, secret } = await this.fetchProjectCredentials();
+
+            const response = await fetch('https://test.stytch.com/v1/magic_links/email/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Basic ${btoa(`${projectId}:${secret}`)}`,
+                },
+                body: JSON.stringify(params)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new HTTPException(400, {
+                    message: `Error sending magic link: ${response.statusText} - ${errorText}`
+                });
+            }
+
+            const result = await response.json() as { request_id: string };
+            return this.formatResponse(`Magic link sent successfully to ${params.email}. Request ID: ${result.request_id}`);
         })
 
         return server
