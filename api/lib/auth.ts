@@ -1,7 +1,7 @@
-import {createMiddleware} from "hono/factory";
-import {HTTPException} from "hono/http-exception";
-import {getCookie} from "hono/cookie";
-import {Client} from "stytch";
+import { getCookie } from "hono/cookie";
+import { createMiddleware } from "hono/factory";
+import { HTTPException } from "hono/http-exception";
+import { B2BClient } from "stytch";
 
 /**
  * stytchAuthMiddleware is a Hono middleware that validates that the user is logged in
@@ -19,7 +19,7 @@ export const stytchSessionAuthMiddleware = createMiddleware<{
         const authRes = await getClient(c.env).sessions.authenticateJwt({
             session_jwt: sessionCookie ?? '',
         })
-        c.set('userID', authRes.session.user_id);
+        c.set('userID', authRes.session_jwt);
     } catch (error) {
         console.error(error);
         throw new HTTPException(401, {message: 'Unauthenticated'})
@@ -54,11 +54,11 @@ export const stytchBearerTokenAuthMiddleware = createMiddleware<{
     await next()
 })
 
-let client: Client | null = null;
+let client: B2BClient | null = null;
 
-function getClient(env: Env): Client {
+function getClient(env: Env): B2BClient {
     if (!client) {
-        client = new Client({
+        client = new B2BClient({
             project_id: env.STYTCH_PROJECT_ID,
             secret: env.STYTCH_PROJECT_SECRET,
         })

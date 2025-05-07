@@ -48,14 +48,16 @@
 		},
 		{
 			"binding": "MEMBER_API_KEYS",
-			"id": "3c2dc82c6f7147c08d9fd187e965a5a9"
+			"id": "a69cc4bfbfdf43f68ae55bc268762c4f"
 		}
 	],
 	/**
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
-	//	"vars": {},
+	"vars": {
+		"STYTCH_PROJECT_ID": "project-live-9a6d7e6f-d787-4ec5-8edb-e1eb5b180d77",
+	},
 	/**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
@@ -65,6 +67,7 @@
 	 * https://developers.cloudflare.com/workers/static-assets/binding/
 	 */
 	"assets": {
+		"directory": "dist",
 		"run_worker_first": true,
 		"not_found_handling": "single-page-application",
 		"binding": "ASSETS"

@@ -1,15 +1,15 @@
-import {WeatherAppMCP} from "./WeatherAppMCP.ts";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { WeatherAppMCP } from "./WeatherAppMCP.ts";
 import {
     getStytchOAuthEndpointUrl,
     stytchBearerTokenAuthMiddleware,
     stytchSessionAuthMiddleware
 } from "./lib/auth";
-import {cors} from "hono/cors";
-import {Hono} from "hono";
-import {decryptSecret, encryptSecret} from "./lib/keys.ts";
+import { decryptSecret, encryptSecret } from "./lib/keys.ts";
 
 // Export the WeatherAppMCP class so the Worker runtime can find it
-export {WeatherAppMCP};
+export { WeatherAppMCP };
 
 const SecretManagementAPI = new Hono<{ Bindings: Env }>()
     .get('/apikey', stytchSessionAuthMiddleware, async (c) => {
@@ -46,11 +46,10 @@ export default new Hono<{ Bindings: Env }>()
 
     // Serve the OAuth Authorization Server response for Dynamic Client Registration
     .get('/.well-known/oauth-authorization-server', async (c) => {
-        const url = new URL(c.req.url);
         return c.json({
             issuer: c.env.STYTCH_PROJECT_ID,
             // Link to the OAuth Authorization screen implemented within the React UI
-            authorization_endpoint: `${url.origin}/oauth/authorize`,
+            authorization_endpoint: `https://stytch.com/oauth/authorize`,
             token_endpoint: getStytchOAuthEndpointUrl(c.env, 'oauth2/token'),
             registration_endpoint: getStytchOAuthEndpointUrl(c.env, 'oauth2/register'),
             scopes_supported: ['openid', 'profile', 'email', 'offline_access'],
