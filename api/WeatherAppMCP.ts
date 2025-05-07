@@ -3,7 +3,7 @@ import { McpAgent } from "agents/mcp";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { getStytchOAuthEndpointUrl } from "./lib/auth.ts";
-import { decryptSecret } from "./lib/keys.ts";
+import {decryptSecret, encryptSecret} from "./lib/keys.ts";
 
 type AuthenticationContext = {
     subject: string,
@@ -69,18 +69,69 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     async init() {
     }
 
-    async fetchProjectCredentials(): Promise<{ projectId: string; secret: string }> {
+    // @ts-ignore
+    async createSecret(projectID: string): Promise<string> {
+        // TODO call PWA to create secret
+        return "secret-123";
+    }
+
+    async createProject(): Promise<string> {
+        // TODO call PWA to create project
+        return "project-123";
+    }
+
+    async getOrSetProjectID(projectID: string | null): Promise<{ projectID: string; secret: string; apiBaseURL: string }> {
+        if (!projectID) {
+            projectID = await this.createProject();
+        }
+        const memberAPIKeys = await this.env.MEMBER_API_KEYS.get(this.props.subject);
+        // map of project ID to secret
+        let apiKeys: Record<string , string> = {};
+        if (memberAPIKeys) {
+            apiKeys = JSON.parse(memberAPIKeys);
+        }
+        let encryptedSecret = apiKeys[projectID];
+        let decryptedSecret = '';
+        let secretExists = !!encryptedSecret
+        if (!encryptedSecret) {
+            decryptedSecret  = await this.createSecret(projectID);
+            encryptedSecret = await encryptSecret(this.env, decryptedSecret);
+            apiKeys[projectID] = encryptedSecret
+        } else {
+            decryptedSecret = await decryptSecret(this.env, encryptedSecret);
+        }
+        if (!secretExists) {
+            await this.env.MEMBER_API_KEYS.put(this.props.subject, JSON.stringify(apiKeys));
+        }
+        let apiBaseURL = 'https://test.stytch.com/v1/';
+        if (projectID.includes('live')) {
+            apiBaseURL = 'https://api.stytch.com/v1/';
+        }
+        return {
+            projectID: projectID,
+            secret: decryptedSecret,
+            apiBaseURL: apiBaseURL,
+        }
+    }
+
+    async fetchProjectCredentials(): Promise<{ projectId: string; secret: string; apiBaseURL: string }> {
         const project_id = await this.env.API_KEYS.get(this.props.subject + 'projectID');
         const secret = await this.env.API_KEYS.get(this.props.subject + 'secret');
+
         if (!project_id || !secret) {
             throw new HTTPException(401, { message: 'Unauthenticated' });
         }
 
         const decryptedSecret = await decryptSecret(this.env, secret);
         const decryptedProjectId = await decryptSecret(this.env, project_id);
+        let apiBaseURL = 'https://test.stytch.com/v1/';
+        if (decryptedProjectId.includes('live')) {
+            apiBaseURL = 'https://api.stytch.com/v1/';
+        }
         return {
             projectId: decryptedProjectId,
-            secret: decryptedSecret
+            secret: decryptedSecret,
+            apiBaseURL: apiBaseURL
         }
     }
 
@@ -134,6 +185,19 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             };
         });
 
+        server.tool('inputProjectID', 'Specify your project', {projectIDInput: z.string()},  async ({projectIDInput}) => {
+            const { projectID, secret } = await this.getOrSetProjectID(projectIDInput);
+            return this.formatResponse(`Successfully set ${projectID} with secret ${secret}`)
+        })
+
+        server.tool('listProjects', 'List all of your projects', async () => {
+            const memberAPIKeys = await this.env.API_KEYS.get(this.props.subject);
+            if (!memberAPIKeys) {
+                return this.formatResponse("You don't have any projects configured. Use the inputProjectID tool to create one.");
+            }
+            return this.formatResponse(memberAPIKeys);
+        })
+
         server.tool('sendTestEmail', 'Sends a test email to the email address specified in the email template.', { ...SendTestEmailTemplateBody }, async ({...sendTestEmailTemplateBody}) => {
             const { projectId, secret } = await this.fetchProjectCredentials();
             console.log(`projectId: ${projectId}, secret: ${secret}`)
@@ -163,7 +227,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': btoa(`TKTK:TKTK`),
+                    'Authorization': this.props.accessToken,
                 },
                 body: JSON.stringify({
                     email_template: {
@@ -204,9 +268,9 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         server.tool('sendMagicLink', 'Sends a magic link to a user\'s email address', {
             ...sendMagicLinkParams
         }, async (params) => {
-            const { projectId, secret } = await this.fetchProjectCredentials();
+            const { projectId, secret, apiBaseURL } = await this.fetchProjectCredentials();
 
-            const response = await fetch('https://test.stytch.com/v1/magic_links/email/send', {
+            const response = await fetch(apiBaseURL + 'magic_links/email/send', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -227,8 +291,8 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         })
 
         server.tool('LoginOrCreateEmailOTP', 'Sends an email one time passcode to the specified email', {...LoginOrCreateEmailOTPBody}, async ({...loginOrCreateEmailOTPBody}) => {
-            const { projectId, secret } = await this.fetchProjectCredentials();
-            const response = await fetch(`https://test.stytch.com/v1/otps/email/login_or_create`, {
+            const { projectId, secret, apiBaseURL } = await this.fetchProjectCredentials();
+            const response = await fetch(apiBaseURL + `otps/email/login_or_create`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
