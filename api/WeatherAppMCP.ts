@@ -34,16 +34,6 @@ const prebuiltCustomizationOptions = {
     text_alignment: z.string().optional(),
 }
 
-const URLTypeSchema = z.object({
-    type: z.string(),
-    is_default: z.boolean(),
-})
-
-const createRedirectURLOptions = {
-    url: z.string(),
-    valid_types: z.array(URLTypeSchema),
-};
-
 export const LoginOrCreateEmailOTPBody = {
     email: z.string(),
     expiration_minutes: z.number().min(1).max(60).optional(),
@@ -129,27 +119,6 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             projectID: projectID,
             secret: decryptedSecret,
             apiBaseURL: apiBaseURL,
-        }
-    }
-
-    async fetchProjectCredentials(): Promise<{ projectId: string; secret: string; apiBaseURL: string }> {
-        const project_id = await this.env.API_KEYS.get(this.props.subject + 'projectID');
-        const secret = await this.env.API_KEYS.get(this.props.subject + 'secret');
-
-        if (!project_id || !secret) {
-            throw new HTTPException(401, { message: 'Unauthenticated' });
-        }
-
-        const decryptedSecret = await decryptSecret(this.env, secret);
-        const decryptedProjectId = await decryptSecret(this.env, project_id);
-        let apiBaseURL = 'https://test.stytch.com/v1/';
-        if (decryptedProjectId.includes('live')) {
-            apiBaseURL = 'https://api.stytch.com/v1/';
-        }
-        return {
-            projectId: decryptedProjectId,
-            secret: decryptedSecret,
-            apiBaseURL: apiBaseURL
         }
     }
 
@@ -248,10 +217,10 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         })
 
         server.tool('createRedirectURL', 'Create a redirect URL for your project', {
-            liveProjectId: z.string(),
-            ...createRedirectURLOptions
-        }, async ({ liveProjectId, ...createRedirectURLOptions}) => {
-            const response = await fetch(`https://management.stytch.com/v1/projects/${liveProjectId}/redirect_urls`, {
+            projectID: z.string(),
+            url: z.string(),
+        }, async ({ projectID, url}) => {
+            const response = await fetch(`https://management.stytch.com/v1/projects/${projectID}/redirect_urls`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -259,7 +228,21 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
                 },
                 body: JSON.stringify({
                     redirect_url: {
-                        ...createRedirectURLOptions,
+                        url: url,
+                        valid_types: [
+                            {
+                                type: 'LOGIN',
+                                is_default: true,
+                            },
+                            {
+                                type: 'SIGNUP',
+                                is_default: true,
+                            },
+                            {
+                                type: 'INVITE',
+                                is_default: true,
+                            }
+                        ],
                     }
                 })
             })
@@ -267,7 +250,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
                 throw new HTTPException(400, {message: `Error creating redirect URL: ${response.statusText} - ${await response.text()}`})
             }
             const redirectURLResp = await response.json() as { redirect_url: { url: string } }
-            return this.formatResponse(`Redirect URL created for ${liveProjectId}. Redirect URL: ${redirectURLResp.redirect_url.url}`)
+            return this.formatResponse(`Redirect URL created for ${projectID}. Redirect URL: ${redirectURLResp.redirect_url.url}`)
         })
 
         server.tool('sendMagicLink', 'Sends a magic link to a user\'s email address', {
