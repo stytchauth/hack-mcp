@@ -26,34 +26,23 @@ const sendMagicLinkParams = {
     session_jwt: z.string().optional(),
 }
 
-const emailTemplateOptions = {
-    name: z.string(),
-    buttonColor: z.string().optional().default('#106ee9'),
-    buttonTextColor: z.string().optional(),
-    fontFamily: z.string().optional(),
-    textAlignment: z.union([z.literal('left'), z.literal('center')]).optional(),
-    logoSrc: z.string().optional(),
-    buttonBorderRadius: z.number().max(18.5).min(0).multipleOf(0.1).optional().default(0),
-    fromDomain: z.string().optional(),
-    fromLocalPart: z.string().optional(),
-    fromName: z.string().optional(),
-    replyToLocalPart: z.string().optional(),
-    replyToName: z.string().optional(),
-    htmlContent: z.string().optional(),
-    subject: z.string().optional(),
-    plaintextContent: z.string().optional(),
-  };
-
-export const SendTestEmailTemplateBody = {
-    ...emailTemplateOptions,
-    testProjectId: z.string(),
-    method: z.string().optional(),
-    locale: z.string().optional(),
-    toName: z.string(),
-    toAddress: z.string(),
-    templateType: z.string().default('login'),
-    useSecondarySubject: z.boolean().optional(),
+const prebuiltCustomizationOptions = {
+    button_border_radius: z.number().optional(),
+    button_color: z.string().optional().default('#106ee9'),
+    button_text_color: z.string().optional(),
+    font_family: z.string().optional(),
+    text_alignment: z.string().optional(),
 }
+
+const URLTypeSchema = z.object({
+    type: z.string(),
+    is_default: z.boolean(),
+})
+
+const createRedirectURLOptions = {
+    url: z.string(),
+    valid_types: z.array(URLTypeSchema),
+};
 
 export const LoginOrCreateEmailOTPBody = {
     email: z.string(),
@@ -104,7 +93,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         }
         const createProjectResp = await response.json() as { project: { live_project_id: string } }
         if (!createProjectResp.project) {
-            throw new HTTPException(400, {message: `Project response was null`})
+            throw new HTTPException(400, {message: `Project response was null`});
         }
         return createProjectResp.project.live_project_id;
     }
@@ -121,11 +110,11 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         }
         let encryptedSecret = apiKeys[projectID];
         let decryptedSecret = '';
-        let secretExists = !!encryptedSecret
+        let secretExists = !!encryptedSecret;
         if (!encryptedSecret) {
             decryptedSecret  = await this.createSecret(projectID);
             encryptedSecret = await encryptSecret(this.env, decryptedSecret);
-            apiKeys[projectID] = encryptedSecret
+            apiKeys[projectID] = encryptedSecret;
         } else {
             decryptedSecret = await decryptSecret(this.env, encryptedSecret);
         }
@@ -215,52 +204,82 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         });
 
         server.tool('inputProjectID', 'Specify your project', {projectIDInput: z.string()},  async ({projectIDInput}) => {
-            const { projectID, secret } = await this.getOrSetProjectID(projectIDInput);
-            return this.formatResponse(`Successfully set ${projectID} with secret ${secret}`)
+            const { projectID } = await this.getOrSetProjectID(projectIDInput);
+            return this.formatResponse(`Successfully set ${projectID}`)
         })
 
         server.tool('listProjects', 'List all of your projects', async () => {
-            const memberAPIKeys = await this.env.API_KEYS.get(this.props.subject);
+            const memberAPIKeys = await this.env.MEMBER_API_KEYS.get(this.props.subject);
             if (!memberAPIKeys) {
                 return this.formatResponse("You don't have any projects configured. Use the inputProjectID tool to create one.");
             }
-            return this.formatResponse(memberAPIKeys);
+            const apiKeys = JSON.parse(memberAPIKeys);
+            const projectIDs = Object.keys(apiKeys).filter(projectID => projectID.startsWith("project"));
+            return this.formatResponse(projectIDs.toString());
         })
 
-        server.tool('createEmailTemplate', 'Creates an customer email template for the project.', {
+        server.tool('createEmailTemplate', 'Creates an custom email template for the project.', {
             liveProjectId: z.string(),
-            ...emailTemplateOptions
-        }, async ({ ...emailTemplateOptions}) => {
-            const { projectId, } = await this.fetchProjectCredentials();
-            const response = await fetch(`https://management.stytch.com/v1/projects/${projectId}/email_templates`, {
+            template_id: z.string(),
+            name: z.string(),
+            ...prebuiltCustomizationOptions,
+        }, async ({ liveProjectId, template_id, name, ...prebuiltCustomizationOptions}) => {
+            const response = await fetch(`https://management.stytch.com/v1/projects/${liveProjectId}/email_templates`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': this.props.accessToken,
+                    'Authorization': 'Bearer ' + this.props.accessToken,
                 },
                 body: JSON.stringify({
                     email_template: {
-                        ...emailTemplateOptions,
+                        template_id: template_id,
+                        name: name,
+                        prebuilt_customization: {
+                            ...prebuiltCustomizationOptions,
+                        }
                     }
                 })
             })
             if (!response.ok) {
                 throw new HTTPException(400, {message: `Error creating email template: ${response.statusText} - ${await response.text()}`})
             }
-            const emailTemplate = await response.json() as { email_template_id: string }
-            return this.formatResponse(`Email template created for ${projectId}. Email template id: ${emailTemplate.email_template_id}`)
+            const emailTemplate = await response.json() as { email_template: { template_id: string } }
+            return this.formatResponse(`Email template created for ${liveProjectId}. Email template id: ${emailTemplate.email_template.template_id}`)
+        })
+
+        server.tool('createRedirectURL', 'Create a redirect URL for your project', {
+            liveProjectId: z.string(),
+            ...createRedirectURLOptions
+        }, async ({ liveProjectId, ...createRedirectURLOptions}) => {
+            const response = await fetch(`https://management.stytch.com/v1/projects/${liveProjectId}/redirect_urls`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + this.props.accessToken,
+                },
+                body: JSON.stringify({
+                    redirect_url: {
+                        ...createRedirectURLOptions,
+                    }
+                })
+            })
+            if (!response.ok) {
+                throw new HTTPException(400, {message: `Error creating redirect URL: ${response.statusText} - ${await response.text()}`})
+            }
+            const redirectURLResp = await response.json() as { redirect_url: { url: string } }
+            return this.formatResponse(`Redirect URL created for ${liveProjectId}. Redirect URL: ${redirectURLResp.redirect_url.url}`)
         })
 
         server.tool('sendMagicLink', 'Sends a magic link to a user\'s email address', {
-            ...sendMagicLinkParams
-        }, async (params) => {
-            const { projectId, secret, apiBaseURL } = await this.fetchProjectCredentials();
-
+            projectID: z.string(),
+            ...sendMagicLinkParams,
+        }, async ({projectID, ...params}) => {
+            const { secret, apiBaseURL } = await this.getOrSetProjectID(projectID);
             const response = await fetch(apiBaseURL + 'magic_links/email/send', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Basic ${btoa(`${projectId}:${secret}`)}`,
+                    'Authorization': `Basic ${btoa(`${projectID}:${secret}`)}`,
                 },
                 body: JSON.stringify(params)
             });
@@ -276,13 +295,16 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             return this.formatResponse(`Magic link sent successfully to ${params.email}. Request ID: ${result.request_id}`);
         })
 
-        server.tool('LoginOrCreateEmailOTP', 'Sends an email one time passcode to the specified email', {...LoginOrCreateEmailOTPBody}, async ({...loginOrCreateEmailOTPBody}) => {
-            const { projectId, secret, apiBaseURL } = await this.fetchProjectCredentials();
+        server.tool('LoginOrCreateEmailOTP', 'Sends an email one time passcode to the specified email', {
+            projectID: z.string(),
+            ...LoginOrCreateEmailOTPBody,
+        }, async ({projectID, ...loginOrCreateEmailOTPBody}) => {
+            const { secret, apiBaseURL } = await this.getOrSetProjectID(projectID);
             const response = await fetch(apiBaseURL + `otps/email/login_or_create`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Basic ${btoa(`${projectId}:${secret}`)}`
+                    'Authorization': `Basic ${btoa(`${projectID}:${secret}`)}`
                 },
                 body: JSON.stringify({
                     ...loginOrCreateEmailOTPBody,
