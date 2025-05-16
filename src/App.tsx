@@ -1,4 +1,15 @@
-import './App.css'
+import './App.css';
+import CodeBlock from './CodeBlock'; // Import the new component
+
+const regularConnection = `npx mcp-remote@0.1.2 ${window.origin}/sse`
+const claudeDesktop = `"stytch-mcp": {
+    "command": "npx",
+    "args": [
+        "mcp-remote@0.1.2",
+        "${window.origin}/sse"
+    ]
+}
+`;
 
 function App() {
     return (
@@ -15,9 +26,13 @@ function App() {
                 Connect your MCP client to <code>{window.origin}/sse</code> to interact with the
                 service. Clients that do not support remote OAuth can use the following command:
             </p>
-            <div className="code-block">npx mcp-remote@0.1.2 {window.origin}/sse</div>
+            <CodeBlock text={regularConnection} />
+            <p>
+                Claude Desktop configuration:
+            </p>
+            <CodeBlock text={claudeDesktop} />
         </main>
-    )
+    );
 }
 
 export default App;
