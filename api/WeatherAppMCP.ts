@@ -152,7 +152,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async createPublicToken(project_id: string): Promise<string> {
-        const url = `https://api.stytch.com/v1/projects/${project_id}/public_tokens`;
+        const url = `https://management.stytch.com/v1/projects/${project_id}/public_tokens`;
         const options = {
             method: 'POST',
             headers: {
@@ -165,7 +165,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async getAllPublicTokens(project_id: string): Promise<string> {
-        const url = `https://api.stytch.com/v1/projects/${project_id}/public_tokens`;
+        const url = `https://management.stytch.com/v1/projects/${project_id}/public_tokens`;
         const options = {
             method: 'GET',
         };
@@ -174,7 +174,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async deletePublicToken(project_id: string, public_token: string): Promise<string> {
-        const url = `https://api.stytch.com/v1/projects/${project_id}/public_tokens/${public_token}`;
+        const url = `https://management.stytch.com/v1/projects/${project_id}/public_tokens/${public_token}`;
         const options = {
             method: 'DELETE',
         };
@@ -183,7 +183,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async createRedirectURL(project_id: string, url: string, valid_types: Array<{type: string, is_default: boolean}>): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/redirect_urls`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/redirect_urls`;
         const options = {
             method: 'POST',
             headers: {
@@ -196,7 +196,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async getAllRedirectURLs(project_id: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/redirect_urls/all`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/redirect_urls/all`;
         const options = {
             method: 'GET',
         };
@@ -205,7 +205,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async getRedirectURL(project_id: string, url: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/redirect_urls?url=${encodeURIComponent(url)}`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/redirect_urls?url=${encodeURIComponent(url)}`;
         const options = {
             method: 'GET',
         };
@@ -214,7 +214,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async updateRedirectURL(project_id: string, url: string, valid_types: Array<{type: string, is_default: boolean}>): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/redirect_urls?url=${encodeURIComponent(url)}`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/redirect_urls?url=${encodeURIComponent(url)}`;
         const options = {
             method: 'PUT',
             headers: {
@@ -227,7 +227,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async deleteRedirectURL(project_id: string, url: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/redirect_urls?url=${encodeURIComponent(url)}`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/redirect_urls?url=${encodeURIComponent(url)}`;
         const options = {
             method: 'DELETE',
         };
@@ -236,7 +236,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async getSecret(project_id: string, secret_id: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/secrets/${secret_id}`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/secrets/${secret_id}`;
         const options = {
             method: 'GET',
         };
@@ -245,7 +245,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async getAllSecrets(project_id: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/secrets`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/secrets`;
         const options = {
             method: 'GET',
         };
@@ -254,7 +254,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async createSecret(project_id: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/secrets`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/secrets`;
         const options = {
             method: 'POST',
         };
@@ -263,7 +263,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async deleteSecret(project_id: string, secret_id: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/secrets/${secret_id}`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/secrets/${secret_id}`;
         const options = {
             method: 'DELETE',
         };
@@ -272,7 +272,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async getEmailTemplate(project_id: string, template_id: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/email_templates/${template_id}`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/email_templates/${template_id}`;
         const options = {
             method: 'GET',
         };
@@ -281,7 +281,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async getAllEmailTemplates(project_id: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/email_templates`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/email_templates`;
         const options = {
             method: 'GET',
         };
@@ -290,7 +290,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async deleteEmailTemplate(project_id: string, template_id: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/email_templates/${template_id}`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/email_templates/${template_id}`;
         const options = {
             method: 'DELETE',
         };
@@ -299,7 +299,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async updateEmailTemplate(project_id: string, template_id: string, name?: string, subject?: string, body?: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/email_templates/${template_id}`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/email_templates/${template_id}`;
         const options = {
             method: 'PUT',
             headers: {
@@ -312,7 +312,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async getPasswordStrengthConfig(project_id: string): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/password_strength`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/password_strength`;
         const options = {
             method: 'GET',
         };
@@ -321,7 +321,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     }
 
     async setPasswordStrengthConfig(project_id: string, password_strength_config: object): Promise<string> {
-        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/password_strength`;
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/password_strength`;
         const options = {
             method: 'PUT',
             headers: {
