@@ -178,6 +178,13 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         return response.json();
     }
 
+    async listProjects(): Promise<string> {
+        const url = 'https://management.stytch.com/v1/projects';
+        const options = {method: 'GET',};
+        const projects = await this.fetchWithErrorHandling(url, options);
+        return `Projects: ${JSON.stringify(projects)}`;
+    }
+
     async createPublicToken(project_id: string): Promise<string> {
         const url = `https://management.stytch.com/v1/projects/${project_id}/public_tokens`;
         const options = {
@@ -390,6 +397,12 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             };
         });
 
+        server.tool('listProjects', 'List all Stytch Projects',
+            async ({}) => {
+                const result = await this.listProjects();
+                return this.formatResponse(result);
+            });
+
         server.tool('createRedirectURL', 'Create a redirect URL for your project', createRedirectURLParams,
             async ({project_id, url, valid_types}) => {
                 const result = await this.createRedirectURL(project_id, url, valid_types);
@@ -468,7 +481,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
                 return this.formatResponse(result);
             });
 
-        server.tool('createEmailTemplate', 'Creates an custom email template for the project.', createEmailTemplateParams,
+        server.tool('createEmailTemplate', 'Creates an custom email template for the project. Either prebuiltCustomization or customHtmlCustomization is required. If Custom HTML is used, it must contain a {{magic_link_url}} placeholder for the magic link.', createEmailTemplateParams,
             async ({
                        project_id, template_id, ...customization
                    }) => {
@@ -491,7 +504,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             });
 
         // Add the updateEmailTemplate tool
-        server.tool('updateEmailTemplate', 'Update an email template for a project. Either prebuiltCustomization or customHtmlCustomization is required', updateEmailTemplateParams,
+        server.tool('updateEmailTemplate', 'Update an email template for a project. Either prebuiltCustomization or customHtmlCustomization is required. If Custom HTML is used, it must contain a {{magic_link_url}} placeholder for the magic link.', updateEmailTemplateParams,
             async ({project_id, template_id, ...customization}) => {
                 const result = await this.updateEmailTemplate(project_id, template_id, customization);
                 return this.formatResponse(result);
