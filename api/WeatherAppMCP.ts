@@ -484,7 +484,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     async updateConsumerSDKConfig(project_id: string, config: object): Promise<string> {
         const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/sdk/consumer`;
         const options = {
-            method: 'GET',
+            method: 'PUT',
             headers: {'Content-Type': 'application/json',},
             body: JSON.stringify({config})
         };
@@ -495,7 +495,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
     async updateB2BSDKConfig(project_id: string, config: object): Promise<string> {
         const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/sdk/b2b`;
         const options = {
-            method: 'GET',
+            method: 'PUT',
             headers: {'Content-Type': 'application/json',},
             body: JSON.stringify({config})
         };
