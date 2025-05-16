@@ -153,6 +153,121 @@ const setPasswordStrengthConfigParams = {
     })
 };
 
+const ConsumerSDKConfigSchema = z.object({
+    basic: z.object({
+        bundle_ids: z.array(z.string()),
+        create_new_users: z.boolean(),
+        domains: z.array(z.string()),
+        enabled: z.boolean(),
+    }).optional(),
+    biometrics: z.object({
+        create_biometrics_enabled: z.boolean(),
+        enabled: z.boolean(),
+    }).optional(),
+    cookies: z.object({
+        http_only: z.enum(["DISABLED"]),
+    }).optional(),
+    crypto_wallets: z.object({
+        enabled: z.boolean(),
+        siwe_required: z.boolean(),
+    }).optional(),
+    dfppa: z.object({
+        enabled: z.enum(["DISABLED"]),
+        lookup_timeout_seconds: z.number(),
+        on_challenge: z.enum(["ALLOW"]),
+    }).optional(),
+    magic_links: z.object({
+        login_or_create_enabled: z.boolean(),
+        pkce_required: z.boolean(),
+        send_enabled: z.boolean(),
+    }).optional(),
+    oauth: z.object({
+        enabled: z.boolean(),
+        pkce_required: z.boolean(),
+    }).optional(),
+    otps: z.object({
+        email_login_or_create_enabled: z.boolean(),
+        email_send_enabled: z.boolean(),
+        sms_autofill_metadata: z.array(z.object({
+            bundle_id: z.string(),
+            id: z.number(),
+            metadata_type: z.enum(["domain", "hash"]),
+            metadata_value: z.string(),
+        })),
+        sms_login_or_create_enabled: z.boolean(),
+        sms_send_enabled: z.boolean(),
+        whatsapp_login_or_create_enabled: z.boolean(),
+        whatsapp_send_enabled: z.boolean(),
+    }).optional(),
+    passwords: z.object({
+        enabled: z.boolean(),
+        pkce_required_for_password_resets: z.boolean(),
+    }).optional(),
+    sessions: z.object({
+        max_session_duration_minutes: z.number(),
+    }).optional(),
+    totps: z.object({
+        create_totps: z.boolean(),
+        enabled: z.boolean(),
+    }).optional(),
+    webauthn: z.object({
+        create_webauthns: z.boolean(),
+        enabled: z.boolean(),
+    }).optional(),
+});
+
+const B2BSDKConfigSchema = z.object({
+    basic: z.object({
+        allow_self_onboarding: z.boolean(),
+        bundle_ids: z.array(z.string()),
+        create_new_members: z.boolean(),
+        domains: z.array(z.string()),
+        enable_member_permissions: z.boolean(),
+        enabled: z.boolean(),
+    }).optional(),
+    cookies: z.object({
+        http_only: z.enum(["DISABLED"]),
+    }).optional(),
+    dfppa: z.object({
+        enabled: z.enum(["DISABLED"]),
+        lookup_timeout_seconds: z.number(),
+        on_challenge: z.enum(["ALLOW"]),
+    }).optional(),
+    magic_links: z.object({
+        enabled: z.boolean(),
+        pkce_required: z.boolean(),
+    }).optional(),
+    oauth: z.object({
+        enabled: z.boolean(),
+        pkce_required: z.boolean(),
+    }).optional(),
+    otps: z.object({
+        email_enabled: z.boolean(),
+        sms_autofill_metadata: z.array(z.object({
+            bundle_id: z.string(),
+            id: z.number(),
+            metadata_type: z.enum(["domain", "hash"]),
+            metadata_value: z.string(),
+        })),
+        sms_enabled: z.boolean(),
+    }).optional(),
+    passwords: z.object({
+        enabled: z.boolean(),
+        pkce_required_for_password_resets: z.boolean(),
+    }).optional(),
+    sessions: z.object({
+        max_session_duration_minutes: z.number(),
+    }).optional(),
+    sso: z.object({
+        enabled: z.boolean(),
+        pkce_required: z.boolean(),
+    }).optional(),
+    totps: z.object({
+        create_totps: z.boolean(),
+        enabled: z.boolean(),
+    }).optional(),
+});
+
 type AuthenticationContext = {
     subject: string,
     accessToken: string,
@@ -366,6 +481,28 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         return `SDK Config: ${JSON.stringify(result)}`;
     }
 
+    async updateConsumerSDKConfig(project_id: string, config: object): Promise<string> {
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/sdk/consumer`;
+        const options = {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json',},
+            body: JSON.stringify({config})
+        };
+        const result = await this.fetchWithErrorHandling(apiUrl, options);
+        return `SDK Config: ${JSON.stringify(result)}`;
+    }
+
+    async updateB2BSDKConfig(project_id: string, config: object): Promise<string> {
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/sdk/b2b`;
+        const options = {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json',},
+            body: JSON.stringify({config})
+        };
+        const result = await this.fetchWithErrorHandling(apiUrl, options);
+        return `SDK Config: ${JSON.stringify(result)}`;
+    }
+
     formatResponse = (description: string): {
         content: Array<{ type: 'text', text: string }>
     } => {
@@ -547,6 +684,20 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         });
 
         server.tool('getB2BSDKConfig', 'Retrieves the SDK Configuration for a B2B project', getPasswordStrengthConfigParams, async ({project_id}) => {
+            const result = await this.getB2BSDKConfig(project_id);
+            return this.formatResponse(result);
+        });
+
+        server.tool('updateConsumerSDKConfig', 'Updates the SDK Configuration for a Consumer project. Top level keys are merged with the existing config. Nested keys are overwritten.',
+            {project_id: z.string(), config: ConsumerSDKConfigSchema},
+            async ({project_id, config}) => {
+                const result = await this.updateConsumerSDKConfig(project_id, config);
+                return this.formatResponse(result);
+            });
+
+        server.tool('updateB2BSDKConfig', 'Updates the SDK Configuration for a B2B project. Top level keys are merged with the existing config. Nested keys are overwritten.',
+            {project_id: z.string(), config: B2BSDKConfigSchema},
+            async ({project_id}) => {
             const result = await this.getB2BSDKConfig(project_id);
             return this.formatResponse(result);
         });
