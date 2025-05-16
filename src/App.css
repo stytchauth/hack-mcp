@@ -1,0 +1,11 @@
+.code-block {
+    background-color: rgb(244, 238, 233);
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 1rem;
+    display: block;
+    width: fit-content;
+    border: 1px solid rgb(206, 206, 206);
+}

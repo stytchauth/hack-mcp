@@ -4,45 +4,13 @@ import { WeatherAppMCP } from "./WeatherAppMCP.ts";
 import {
     getStytchOAuthEndpointUrl,
     stytchBearerTokenAuthMiddleware,
-    stytchSessionAuthMiddleware
 } from "./lib/auth";
-import { decryptSecret, encryptSecret } from "./lib/keys.ts";
 
 // Export the WeatherAppMCP class so the Worker runtime can find it
 export { WeatherAppMCP };
 
-const SecretManagementAPI = new Hono<{ Bindings: Env }>()
-    .get('/apikey', stytchSessionAuthMiddleware, async (c) => {
-        const encryptedProjectID = await c.env.API_KEYS.get(c.get('userID')+"projectID");
-        const encryptedSecret = await c.env.API_KEYS.get(c.get('userID')+"secret");
-        if (!encryptedProjectID || !encryptedSecret) return c.json({projectID: null, secret: null});
-
-        const decryptedProjectID = await decryptSecret(c.env, encryptedProjectID);
-        const decryptedSecret = await decryptSecret(c.env, encryptedSecret);
-        return c.json({projectID: decryptedProjectID, secret: decryptedSecret});
-    })
-
-    .post('/apikey', stytchSessionAuthMiddleware, async (c) => {
-        const {projectID, secret} = await c.req.json();
-        if (projectID === null || secret === "" || projectID === "" || secret === null) {
-            await c.env.API_KEYS.delete(c.get('userID')+"projectID");
-            await c.env.API_KEYS.delete(c.get('userID')+"secret");
-        } else {
-            const encryptedProjectID = await encryptSecret(c.env, projectID);
-            const encryptedSecret = await encryptSecret(c.env, secret);
-            await c.env.API_KEYS.put(c.get('userID')+"projectID", encryptedProjectID);
-            await c.env.API_KEYS.put(c.get('userID')+"secret", encryptedSecret);
-        }
-        return c.json({success: true});
-    })
-
-export type App = typeof SecretManagementAPI;
-
 export default new Hono<{ Bindings: Env }>()
     .use(cors())
-
-    // Mount the Secret Management API underneath us
-    .route('/api', SecretManagementAPI)
 
     // Serve the OAuth Authorization Server response for Dynamic Client Registration
     .get('/.well-known/oauth-authorization-server', async (c) => {

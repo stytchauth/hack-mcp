@@ -346,7 +346,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
 
     get server() {
         const server = new McpServer({
-            name: 'Weather Service',
+            name: 'Stytch Dashboard API',
             version: '1.0.0',
         })
 
