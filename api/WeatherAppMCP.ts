@@ -688,14 +688,22 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             return this.formatResponse(result);
         });
 
-        server.tool('updateConsumerSDKConfig', 'Updates the SDK Configuration for a Consumer project. Top level keys are merged with the existing config. Nested keys are overwritten.',
+        server.tool('updateConsumerSDKConfig',
+            'Updates the SDK Configuration for a Consumer project. ' +
+            'This is a DANGEROUS method - when calling this method always call getConsumerSDKConfig first ' +
+            'to get the current config and then pass the entire config object to this method to avoid ' +
+            'overwriting changes unintentionally.',
             {project_id: z.string(), config: ConsumerSDKConfigSchema},
             async ({project_id, config}) => {
                 const result = await this.updateConsumerSDKConfig(project_id, config);
                 return this.formatResponse(result);
             });
 
-        server.tool('updateB2BSDKConfig', 'Updates the SDK Configuration for a B2B project. Top level keys are merged with the existing config. Nested keys are overwritten.',
+        server.tool('updateB2BSDKConfig',
+            'Updates the SDK Configuration for a B2B project. ' +
+            'This is a DANGEROUS method - when calling this method always call getB2BSDKConfig first ' +
+            'to get the current config and then pass the entire config object to this method to avoid ' +
+            'overwriting changes unintentionally.',
             {project_id: z.string(), config: B2BSDKConfigSchema},
             async ({project_id}) => {
             const result = await this.getB2BSDKConfig(project_id);
