@@ -348,6 +348,24 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         return `Password Strength Config updated: ${JSON.stringify(result)}`;
     }
 
+    async getConsumerSDKConfig(project_id: string): Promise<string> {
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/sdk/consumer`;
+        const options = {
+            method: 'GET',
+        };
+        const result = await this.fetchWithErrorHandling(apiUrl, options);
+        return `SDK Config: ${JSON.stringify(result)}`;
+    }
+
+    async getB2BSDKConfig(project_id: string): Promise<string> {
+        const apiUrl = `https://management.stytch.com/v1/projects/${project_id}/sdk/b2b`;
+        const options = {
+            method: 'GET',
+        };
+        const result = await this.fetchWithErrorHandling(apiUrl, options);
+        return `SDK Config: ${JSON.stringify(result)}`;
+    }
+
     formatResponse = (description: string): {
         content: Array<{ type: 'text', text: string }>
     } => {
@@ -522,6 +540,16 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
                 const result = await this.setPasswordStrengthConfig(project_id, password_strength_config);
                 return this.formatResponse(result);
             });
+
+        server.tool('getConsumerSDKConfig', 'Retrieves the SDK Configuration for a Consumer project', getPasswordStrengthConfigParams, async ({project_id}) => {
+            const result = await this.getConsumerSDKConfig(project_id);
+            return this.formatResponse(result);
+        });
+
+        server.tool('getB2BSDKConfig', 'Retrieves the SDK Configuration for a B2B project', getPasswordStrengthConfigParams, async ({project_id}) => {
+            const result = await this.getB2BSDKConfig(project_id);
+            return this.formatResponse(result);
+        });
 
         return server
     }
