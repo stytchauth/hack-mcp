@@ -3,123 +3,334 @@ import { McpAgent } from "agents/mcp";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { getStytchOAuthEndpointUrl } from "./lib/auth.ts";
-import { decryptSecret, encryptSecret } from "./lib/keys.ts";
+
+const createPublicTokenParams = {
+    project_id: z.string(),
+};
+
+const createRedirectURLParams = {
+    project_id: z.string(),
+    url: z.string(),
+    valid_types: z.array(z.object({ type: z.string(), is_default: z.boolean() }))
+};
+
+const getAllRedirectURLsParams = {
+    project_id: z.string(),
+};
+
+const getOrDeleteRedirectURLParams = {
+    project_id: z.string(),
+    url: z.string(),
+};
+
+const updateRedirectURLParams = {
+    project_id: z.string(),
+    url: z.string(),
+    valid_types: z.array(z.object({ type: z.string(), is_default: z.boolean() }))
+};
+
+// Define input parameters for new tools
+const getAllPublicTokensParams = {
+    project_id: z.string(),
+};
+
+const deletePublicTokenParams = {
+    project_id: z.string(),
+    public_token: z.string(),
+};
+
+// Define input parameters for secrets
+const getSecretParams = {
+    project_id: z.string(),
+    secret_id: z.string(),
+};
+
+const getAllSecretsParams = {
+    project_id: z.string(),
+};
+
+const createSecretParams = {
+    project_id: z.string(),
+};
+
+const deleteSecretParams = {
+    project_id: z.string(),
+    secret_id: z.string(),
+};
+
+const getEmailTemplateParams = {
+    project_id: z.string(),
+    template_id: z.string(),
+};
+
+const getAllEmailTemplatesParams = {
+    project_id: z.string(),
+};
+
+const deleteEmailTemplateParams = {
+    project_id: z.string(),
+    template_id: z.string(),
+};
+
+const updateEmailTemplateParams = {
+    project_id: z.string(),
+    template_id: z.string(),
+    name: z.string().optional(),
+    subject: z.string().optional(),
+    body: z.string().optional(),
+};
+
+const createEmailTemplateParams = {
+    project_id: z.string(),
+    template_id: z.string(),
+    name: z.string(),
+    button_border_radius: z.number().optional(),
+    button_color: z.string().optional().default('#106ee9'),
+    button_text_color: z.string().optional(),
+    font_family: z.string().optional(),
+    text_alignment: z.string().optional(),
+};
+
+const getPasswordStrengthConfigParams = {
+    project_id: z.string(),
+};
+
+const setPasswordStrengthConfigParams = {
+    project_id: z.string(),
+    password_strength_config: z.object({
+        check_breach_on_creation: z.boolean(),
+        check_breach_on_authentication: z.boolean(),
+        validate_on_authentication: z.boolean(),
+        validation_policy: z.enum(['LUDS', 'ZXCVBN']),
+        luds_min_password_length: z.number().int().min(8).max(32).optional(),
+        luds_min_password_complexity: z.number().int().min(1).max(4).optional(),
+    })
+};
 
 type AuthenticationContext = {
     subject: string,
     accessToken: string,
 }
 
-const sendMagicLinkParams = {
-    email: z.string().email(),
-    login_magic_link_url: z.string().url().optional(),
-    signup_magic_link_url: z.string().url().optional(),
-    login_expiration_minutes: z.number().min(1).max(60).optional(),
-    signup_expiration_minutes: z.number().min(1).max(60).optional(),
-    login_template_id: z.string().optional(),
-    signup_template_id: z.string().optional(),
-    locale: z.string().optional(),
-    attributes: z.record(z.unknown()).optional(),
-    code_challenge: z.string().optional(),
-    user_id: z.string().optional(),
-    session_token: z.string().optional(),
-    session_jwt: z.string().optional(),
-}
-
-const prebuiltCustomizationOptions = {
-    button_border_radius: z.number().optional(),
-    button_color: z.string().optional().default('#106ee9'),
-    button_text_color: z.string().optional(),
-    font_family: z.string().optional(),
-    text_alignment: z.string().optional(),
-}
-
-export const LoginOrCreateEmailOTPBody = {
-    email: z.string(),
-    expiration_minutes: z.number().min(1).max(60).optional(),
-    login_template_id: z.string().optional(),
-    signup_template_id: z.string().optional(),
-    locale: z.string().optional(),
-    create_user_as_pending: z.boolean().optional(),
-    attributes: z.record(z.unknown()).optional(),
-}
-
 export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext> {
     async init() {
     }
 
-    async createSecret(projectID: string): Promise<string> {
-        const response = await fetch(`https://management.stytch.com/v1/projects/${projectID}/secrets`, {
-            method: 'POST',
+    private async fetchWithErrorHandling<T>(url: string, options: RequestInit): Promise<T> {
+        const enhancedOptions = {
+            ...options,
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + this.props.accessToken,
-            },
-        })
+                'Authorization': `Bearer ${this.props.accessToken}`,
+                ...(options.headers || {})
+            }
+        };
+        const response = await fetch(url, enhancedOptions);
         if (!response.ok) {
-            throw new HTTPException(400, {message: `Error creating secret: ${response.statusText} - ${await response.text()}`})
+            const errorText = await response.text();
+            throw new HTTPException(400, {message: `Error: ${response.statusText} - ${errorText}`});
         }
-        const createProjectResp = await response.json() as { created_secret: { secret: string } }
-        if (!createProjectResp.created_secret) {
-            throw new HTTPException(400, {message: `Secret response was null`})
-        }
-        return createProjectResp.created_secret.secret;
+        return response.json();
     }
 
-    async createProject(): Promise<string> {
-        const response = await fetch(`https://management.stytch.com/v1/projects`, {
+    async createEmailTemplate(project_id: string, template_id: string, name: string, prebuiltCustomization: unknown): Promise<string> {
+        const url = `https://management.stytch.com/v1/projects/${project_id}/email_templates`;
+        const options = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': this.props.accessToken,
             },
             body: JSON.stringify({
-                project_name: 'My Test Project',
-                vertical: 'CONSUMER',
+                email_template: {
+                    template_id: template_id,
+                    name: name,
+                    prebuilt_customization: prebuiltCustomization
+                }
             })
-        })
-        if (!response.ok) {
-            throw new HTTPException(400, {message: `Error creating project: ${response.statusText} - ${await response.text()}`})
-        }
-        const createProjectResp = await response.json() as { project: { live_project_id: string } }
-        if (!createProjectResp.project) {
-            throw new HTTPException(400, {message: `Project response was null`});
-        }
-        return createProjectResp.project.live_project_id;
+        };
+        const result = await this.fetchWithErrorHandling(url, options);
+        return `Email template created: ${JSON.stringify(result)}`;
     }
 
-    async getOrSetProjectID(projectID: string | null): Promise<{ projectID: string; secret: string; apiBaseURL: string }> {
-        if (!projectID) {
-            projectID = await this.createProject();
-        }
-        const memberAPIKeys = await this.env.MEMBER_API_KEYS.get(this.props.subject);
-        // map of project ID to secret
-        let apiKeys: Record<string , string> = {};
-        if (memberAPIKeys) {
-            apiKeys = JSON.parse(memberAPIKeys);
-        }
-        let encryptedSecret = apiKeys[projectID];
-        let decryptedSecret = '';
-        let secretExists = !!encryptedSecret;
-        if (!encryptedSecret) {
-            decryptedSecret  = await this.createSecret(projectID);
-            encryptedSecret = await encryptSecret(this.env, decryptedSecret);
-            apiKeys[projectID] = encryptedSecret;
-        } else {
-            decryptedSecret = await decryptSecret(this.env, encryptedSecret);
-        }
-        if (!secretExists) {
-            await this.env.MEMBER_API_KEYS.put(this.props.subject, JSON.stringify(apiKeys));
-        }
-        let apiBaseURL = 'https://test.stytch.com/v1/';
-        if (projectID.includes('live')) {
-            apiBaseURL = 'https://api.stytch.com/v1/';
-        }
-        return {
-            projectID: projectID,
-            secret: decryptedSecret,
-            apiBaseURL: apiBaseURL,
-        }
+    async createPublicToken(project_id: string): Promise<string> {
+        const url = `https://api.stytch.com/v1/projects/${project_id}/public_tokens`;
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ project_id })
+        };
+        const result = await this.fetchWithErrorHandling(url, options);
+        return `Public token created: ${JSON.stringify(result)}`;
+    }
+
+    async getAllPublicTokens(project_id: string): Promise<string> {
+        const url = `https://api.stytch.com/v1/projects/${project_id}/public_tokens`;
+        const options = {
+            method: 'GET',
+        };
+        const tokens = await this.fetchWithErrorHandling(url, options);
+        return `Public tokens: ${JSON.stringify(tokens)}`;
+    }
+
+    async deletePublicToken(project_id: string, public_token: string): Promise<string> {
+        const url = `https://api.stytch.com/v1/projects/${project_id}/public_tokens/${public_token}`;
+        const options = {
+            method: 'DELETE',
+        };
+        await this.fetchWithErrorHandling<void>(url, options);
+        return `Public token ${public_token} deleted successfully.`;
+    }
+
+    async createRedirectURL(project_id: string, url: string, valid_types: Array<{type: string, is_default: boolean}>): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/redirect_urls`;
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ redirect_url: { url, valid_types } })
+        };
+        const result = await this.fetchWithErrorHandling(apiUrl, options);
+        return `Redirect URL created: ${JSON.stringify(result)}`;
+    }
+
+    async getAllRedirectURLs(project_id: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/redirect_urls/all`;
+        const options = {
+            method: 'GET',
+        };
+        const result = await this.fetchWithErrorHandling(apiUrl, options);
+        return `All Redirect URLs: ${JSON.stringify(result)}`;
+    }
+
+    async getRedirectURL(project_id: string, url: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/redirect_urls?url=${encodeURIComponent(url)}`;
+        const options = {
+            method: 'GET',
+        };
+        const result = await this.fetchWithErrorHandling(apiUrl, options);
+        return `Redirect URL Details: ${JSON.stringify(result)}`;
+    }
+
+    async updateRedirectURL(project_id: string, url: string, valid_types: Array<{type: string, is_default: boolean}>): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/redirect_urls?url=${encodeURIComponent(url)}`;
+        const options = {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ redirect_url: { url, valid_types } })
+        };
+        const result = await this.fetchWithErrorHandling(apiUrl, options);
+        return `Redirect URL updated: ${JSON.stringify(result)}`;
+    }
+
+    async deleteRedirectURL(project_id: string, url: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/redirect_urls?url=${encodeURIComponent(url)}`;
+        const options = {
+            method: 'DELETE',
+        };
+        await this.fetchWithErrorHandling<void>(apiUrl, options);
+        return `Redirect URL deleted successfully.`;
+    }
+
+    async getSecret(project_id: string, secret_id: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/secrets/${secret_id}`;
+        const options = {
+            method: 'GET',
+        };
+        const secret = await this.fetchWithErrorHandling(apiUrl, options);
+        return `Secret Details: ${JSON.stringify(secret)}`;
+    }
+
+    async getAllSecrets(project_id: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/secrets`;
+        const options = {
+            method: 'GET',
+        };
+        const secrets = await this.fetchWithErrorHandling(apiUrl, options);
+        return `All Secrets: ${JSON.stringify(secrets)}`;
+    }
+
+    async createSecret(project_id: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/secrets`;
+        const options = {
+            method: 'POST',
+        };
+        const secret = await this.fetchWithErrorHandling(apiUrl, options);
+        return `Secret created: ${JSON.stringify(secret)}`;
+    }
+
+    async deleteSecret(project_id: string, secret_id: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/secrets/${secret_id}`;
+        const options = {
+            method: 'DELETE',
+        };
+        await this.fetchWithErrorHandling<void>(apiUrl, options);
+        return `Secret ID ${secret_id} deleted successfully.`;
+    }
+
+    async getEmailTemplate(project_id: string, template_id: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/email_templates/${template_id}`;
+        const options = {
+            method: 'GET',
+        };
+        const template = await this.fetchWithErrorHandling(apiUrl, options);
+        return `Email Template Details: ${JSON.stringify(template)}`;
+    }
+
+    async getAllEmailTemplates(project_id: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/email_templates`;
+        const options = {
+            method: 'GET',
+        };
+        const templates = await this.fetchWithErrorHandling(apiUrl, options);
+        return `All Email Templates: ${JSON.stringify(templates)}`;
+    }
+
+    async deleteEmailTemplate(project_id: string, template_id: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/email_templates/${template_id}`;
+        const options = {
+            method: 'DELETE',
+        };
+        await this.fetchWithErrorHandling<void>(apiUrl, options);
+        return `Email Template ID ${template_id} deleted successfully.`;
+    }
+
+    async updateEmailTemplate(project_id: string, template_id: string, name?: string, subject?: string, body?: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/email_templates/${template_id}`;
+        const options = {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email_template: { template_id, name, subject, body } })
+        };
+        const template = await this.fetchWithErrorHandling(apiUrl, options);
+        return `Email Template updated: ${JSON.stringify(template)}`;
+    }
+
+    async getPasswordStrengthConfig(project_id: string): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/password_strength`;
+        const options = {
+            method: 'GET',
+        };
+        const config = await this.fetchWithErrorHandling(apiUrl, options);
+        return `Password Strength Config: ${JSON.stringify(config)}`;
+    }
+
+    async setPasswordStrengthConfig(project_id: string, password_strength_config: object): Promise<string> {
+        const apiUrl = `https://api.stytch.com/v1/projects/${project_id}/password_strength`;
+        const options = {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ password_strength_config })
+        };
+        const result = await this.fetchWithErrorHandling(apiUrl, options);
+        return `Password Strength Config updated: ${JSON.stringify(result)}`;
     }
 
     formatResponse = (description: string): {
@@ -128,7 +339,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         return {
             content: [{
                 type: "text",
-                text: `Success! ${description}`
+                text: description
             }]
         };
     }
@@ -153,6 +364,7 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
                         {
                             type: 'text',
                             text: `Error fetching user information: ${response.statusText}`,
+                            isError: true,
                         },
                     ],
                 };
@@ -172,133 +384,115 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             };
         });
 
-        server.tool('inputProjectID', 'Specify your project', {projectIDInput: z.string()},  async ({projectIDInput}) => {
-            const { projectID } = await this.getOrSetProjectID(projectIDInput);
-            return this.formatResponse(`Successfully set ${projectID}`)
-        })
+        server.tool('createRedirectURL', 'Create a redirect URL for your project', createRedirectURLParams, async ({ project_id, url, valid_types }) => {
+            const result = await this.createRedirectURL(project_id, url, valid_types);
+            return this.formatResponse(result);
+        });
 
-        server.tool('listProjects', 'List all of your projects', async () => {
-            const memberAPIKeys = await this.env.MEMBER_API_KEYS.get(this.props.subject);
-            if (!memberAPIKeys) {
-                return this.formatResponse("You don't have any projects configured. Use the inputProjectID tool to create one.");
-            }
-            const apiKeys = JSON.parse(memberAPIKeys);
-            const projectIDs = Object.keys(apiKeys).filter(projectID => projectID.startsWith("project"));
-            return this.formatResponse(projectIDs.toString());
-        })
+        server.tool('getAllRedirectURLs', 'Retrieve all redirect URLs for a project', getAllRedirectURLsParams, async ({ project_id }) => {
+            const result = await this.getAllRedirectURLs(project_id);
+            return this.formatResponse(result);
+        });
 
-        server.tool('createEmailTemplate', 'Creates an custom email template for the project.', {
-            liveProjectId: z.string(),
-            template_id: z.string(),
-            name: z.string(),
-            ...prebuiltCustomizationOptions,
-        }, async ({ liveProjectId, template_id, name, ...prebuiltCustomizationOptions}) => {
-            const response = await fetch(`https://management.stytch.com/v1/projects/${liveProjectId}/email_templates`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + this.props.accessToken,
-                },
-                body: JSON.stringify({
-                    email_template: {
-                        template_id: template_id,
-                        name: name,
-                        prebuilt_customization: {
-                            ...prebuiltCustomizationOptions,
-                        }
-                    }
-                })
-            })
-            if (!response.ok) {
-                throw new HTTPException(400, {message: `Error creating email template: ${response.statusText} - ${await response.text()}`})
-            }
-            const emailTemplate = await response.json() as { email_template: { template_id: string } }
-            return this.formatResponse(`Email template created for ${liveProjectId}. Email template id: ${emailTemplate.email_template.template_id}`)
-        })
+        server.tool('getRedirectURL', 'Retrieve a specific redirect URL for a project', getOrDeleteRedirectURLParams, async ({ project_id, url }) => {
+            const result = await this.getRedirectURL(project_id, url);
+            return this.formatResponse(result);
+        });
 
-        server.tool('createRedirectURL', 'Create a redirect URL for your project', {
-            projectID: z.string(),
-            url: z.string(),
-        }, async ({ projectID, url}) => {
-            const response = await fetch(`https://management.stytch.com/v1/projects/${projectID}/redirect_urls`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + this.props.accessToken,
-                },
-                body: JSON.stringify({
-                    redirect_url: {
-                        url: url,
-                        valid_types: [
-                            {
-                                type: 'LOGIN',
-                                is_default: true,
-                            },
-                            {
-                                type: 'SIGNUP',
-                                is_default: true,
-                            },
-                            {
-                                type: 'INVITE',
-                                is_default: true,
-                            }
-                        ],
-                    }
-                })
-            })
-            if (!response.ok) {
-                throw new HTTPException(400, {message: `Error creating redirect URL: ${response.statusText} - ${await response.text()}`})
-            }
-            const redirectURLResp = await response.json() as { redirect_url: { url: string } }
-            return this.formatResponse(`Redirect URL created for ${projectID}. Redirect URL: ${redirectURLResp.redirect_url.url}`)
-        })
+        server.tool('updateRedirectURL', 'Update valid types for a redirect URL for a project', updateRedirectURLParams, async ({ project_id, url, valid_types }) => {
+            const result = await this.updateRedirectURL(project_id, url, valid_types);
+            return this.formatResponse(result);
+        });
 
-        server.tool('sendMagicLink', 'Sends a magic link to a user\'s email address', {
-            projectID: z.string(),
-            ...sendMagicLinkParams,
-        }, async ({projectID, ...params}) => {
-            const { secret, apiBaseURL } = await this.getOrSetProjectID(projectID);
-            const response = await fetch(apiBaseURL + 'magic_links/email/send', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Basic ${btoa(`${projectID}:${secret}`)}`,
-                },
-                body: JSON.stringify(params)
-            });
+        server.tool('deleteRedirectURL', 'Delete a redirect URL for a project', getOrDeleteRedirectURLParams, async ({ project_id, url }) => {
+            const result = await this.deleteRedirectURL(project_id, url);
+            return this.formatResponse(result);
+        });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new HTTPException(400, {
-                    message: `Error sending magic link: ${response.statusText} - ${errorText}`
-                });
-            }
+        // Removed redundant or unnecessary tools
 
-            const result = await response.json() as { request_id: string };
-            return this.formatResponse(`Magic link sent successfully to ${params.email}. Request ID: ${result.request_id}`);
-        })
+        // Add the createPublicToken tool
+        server.tool('createPublicToken', 'Creates a public token for a project', createPublicTokenParams, async ({ project_id }) => {
+            const tokenDescription = await this.createPublicToken(project_id);
+            return this.formatResponse(tokenDescription);
+        });
 
-        server.tool('LoginOrCreateEmailOTP', 'Sends an email one time passcode to the specified email', {
-            projectID: z.string(),
-            ...LoginOrCreateEmailOTPBody,
-        }, async ({projectID, ...loginOrCreateEmailOTPBody}) => {
-            const { secret, apiBaseURL } = await this.getOrSetProjectID(projectID);
-            const response = await fetch(apiBaseURL + `otps/email/login_or_create`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Basic ${btoa(`${projectID}:${secret}`)}`
-                },
-                body: JSON.stringify({
-                    ...loginOrCreateEmailOTPBody,
-                })
-            })
-            if (!response.ok) {
-                throw new HTTPException(400, {message: `Error sending email OTP: ${response.statusText} - ${await response.text()}`})
-            }
-            const loginOrCreateEmailOTPResp = await response.json() as { user_id: string, email_id: string }
-            return this.formatResponse(`Email OTP sent. Email id: ${loginOrCreateEmailOTPResp.email_id}`)
-        })
+        // Add the getAllPublicTokens tool
+        server.tool('getAllPublicTokens', 'Retrieve all active public tokens for a project', getAllPublicTokensParams, async ({ project_id }) => {
+            const tokensDescription = await this.getAllPublicTokens(project_id);
+            return this.formatResponse(tokensDescription);
+        });
+
+        // Add the deletePublicToken tool
+        server.tool('deletePublicToken', 'Delete a specific public token for a project', deletePublicTokenParams, async ({ project_id, public_token }) => {
+            const result = await this.deletePublicToken(project_id, public_token);
+            return this.formatResponse(result);
+        });
+
+        // Add the getSecret tool
+        server.tool('getSecret', 'Retrieve a specific secret for a project', getSecretParams, async ({ project_id, secret_id }) => {
+            const result = await this.getSecret(project_id, secret_id);
+            return this.formatResponse(result);
+        });
+
+        // Add the getAllSecrets tool
+        server.tool('getAllSecrets', 'Retrieve all secrets for a project', getAllSecretsParams, async ({ project_id }) => {
+            const result = await this.getAllSecrets(project_id);
+            return this.formatResponse(result);
+        });
+
+        // Add the createSecret tool
+        server.tool('createSecret', 'Create a new secret for a project', createSecretParams, async ({ project_id }) => {
+            const result = await this.createSecret(project_id);
+            return this.formatResponse(result);
+        });
+
+        // Add the deleteSecret tool
+        server.tool('deleteSecret', 'Delete a specific secret for a project', deleteSecretParams, async ({ project_id, secret_id }) => {
+            const result = await this.deleteSecret(project_id, secret_id);
+            return this.formatResponse(result);
+        });
+
+        server.tool('createEmailTemplate', 'Creates an custom email template for the project.', createEmailTemplateParams, async ({ project_id, template_id, name, ...prebuiltCustomizationOptions}) => {
+            const result = await this.createEmailTemplate(project_id, template_id, name, prebuiltCustomizationOptions);
+            return this.formatResponse(result);
+        });
+
+        // Add the getEmailTemplate tool
+        server.tool('getEmailTemplate', 'Retrieve a specific email template for a project', getEmailTemplateParams, async ({ project_id, template_id }) => {
+            const result = await this.getEmailTemplate(project_id, template_id);
+            return this.formatResponse(result);
+        });
+
+        // Add the getAllEmailTemplates tool
+        server.tool('getAllEmailTemplates', 'Retrieve all email templates for a project', getAllEmailTemplatesParams, async ({ project_id }) => {
+            const result = await this.getAllEmailTemplates(project_id);
+            return this.formatResponse(result);
+        });
+
+        // Add the deleteEmailTemplate tool
+        server.tool('deleteEmailTemplate', 'Delete a specific email template for a project', deleteEmailTemplateParams, async ({ project_id, template_id }) => {
+            const result = await this.deleteEmailTemplate(project_id, template_id);
+            return this.formatResponse(result);
+        });
+
+        // Add the updateEmailTemplate tool
+        server.tool('updateEmailTemplate', 'Update an email template for a project', updateEmailTemplateParams, async ({ project_id, template_id, name, subject, body }) => {
+            const result = await this.updateEmailTemplate(project_id, template_id, name, subject, body);
+            return this.formatResponse(result);
+        });
+
+        // Add the getPasswordStrengthConfig tool
+        server.tool('getPasswordStrengthConfig', 'Retrieve the password strength configuration for a project', getPasswordStrengthConfigParams, async ({ project_id }) => {
+            const result = await this.getPasswordStrengthConfig(project_id);
+            return this.formatResponse(result);
+        });
+
+        // Add the setPasswordStrengthConfig tool
+        server.tool('setPasswordStrengthConfig', 'Set the password strength configuration for a project', setPasswordStrengthConfigParams, async ({ project_id, password_strength_config }) => {
+            const result = await this.setPasswordStrengthConfig(project_id, password_strength_config);
+            return this.formatResponse(result);
+        });
 
         return server
     }

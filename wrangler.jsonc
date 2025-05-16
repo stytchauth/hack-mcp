@@ -41,16 +41,6 @@
 			}
 		]
 	},
-	"kv_namespaces": [
-		{
-			"binding": "API_KEYS",
-			"id": "6f4385be905a4635b758ab931d802755"
-		},
-		{
-			"binding": "MEMBER_API_KEYS",
-			"id": "a69cc4bfbfdf43f68ae55bc268762c4f"
-		}
-	],
 	/**
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
