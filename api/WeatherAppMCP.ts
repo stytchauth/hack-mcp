@@ -4,6 +4,11 @@ import {HTTPException} from "hono/http-exception";
 import {z} from "zod";
 import {getStytchOAuthEndpointUrl} from "./lib/auth.ts";
 
+const createProjectParams = {
+    project_name: z.string(),
+    vertical: z.enum(['CONSUMER', 'B2B']),
+}
+
 const createPublicTokenParams = {project_id: z.string(),};
 
 const createRedirectURLParams = {
@@ -293,6 +298,18 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         return response.json();
     }
 
+    async createProject(project_name: string, vertical: string) {
+        const url = `https://management.stytch.com/v1/projects`;
+        const options = {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json',},
+            body: JSON.stringify({project_name, vertical})
+        };
+        const result = await this.fetchWithErrorHandling(url, options);
+        return `Public token created: ${JSON.stringify(result)}`;
+
+    }
+
     async listProjects(): Promise<string> {
         const url = 'https://management.stytch.com/v1/projects';
         const options = {method: 'GET',};
@@ -552,8 +569,14 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             };
         });
 
+        server.tool('createProject', 'Create new Stytch Prokect', createProjectParams,
+            async ({project_name, vertical}) => {
+                const result = await this.createProject(project_name, vertical);
+                return this.formatResponse(result);
+            });
+
         server.tool('listProjects', 'List all Stytch Projects',
-            async ({}) => {
+            async () => {
                 const result = await this.listProjects();
                 return this.formatResponse(result);
             });
@@ -706,9 +729,9 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             'overwriting changes unintentionally.',
             {project_id: z.string(), config: B2BSDKConfigSchema},
             async ({project_id}) => {
-            const result = await this.getB2BSDKConfig(project_id);
-            return this.formatResponse(result);
-        });
+                const result = await this.getB2BSDKConfig(project_id);
+                return this.formatResponse(result);
+            });
 
         return server
     }
