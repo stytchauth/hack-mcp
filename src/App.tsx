@@ -3,9 +3,9 @@ import './App.css'
 function App() {
     return (
         <main>
-            <h1>Stytch MPC</h1>
+            <h1>Stytch MCP</h1>
             <p>
-                Welcome! This is the MPC server for interacting with the Stytch Management API.
+                Welcome! This is the MCP server for interacting with the Stytch Management API.
                 The Stytch Management API can be used to programmatically interact with Stytch assets like
                 Projects, Redirect URLs, Email Templates, and more.
                 Full documentation available{' '}
