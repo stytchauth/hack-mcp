@@ -40,14 +40,14 @@ const deletePublicTokenParams = {
 };
 
 // Define input parameters for secrets
-const getSecretParams = {
-    project_id: z.string(),
-    secret_id: z.string(),
-};
-
-const getAllSecretsParams = {
-    project_id: z.string(),
-};
+// const getSecretParams = {
+//     project_id: z.string(),
+//     secret_id: z.string(),
+// };
+//
+// const getAllSecretsParams = {
+//     project_id: z.string(),
+// };
 
 const createSecretParams = {
     project_id: z.string(),
@@ -58,10 +58,10 @@ const deleteSecretParams = {
     secret_id: z.string(),
 };
 
-const getEmailTemplateParams = {
-    project_id: z.string(),
-    template_id: z.string(),
-};
+// const getEmailTemplateParams = {
+//     project_id: z.string(),
+//     template_id: z.string(),
+// };
 
 const getAllEmailTemplatesParams = {
     project_id: z.string(),
@@ -394,10 +394,10 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
             return this.formatResponse(result);
         });
 
-        server.tool('getRedirectURL', 'Retrieve a specific redirect URL for a project', getOrDeleteRedirectURLParams, async ({ project_id, url }) => {
-            const result = await this.getRedirectURL(project_id, url);
-            return this.formatResponse(result);
-        });
+        // server.tool('getRedirectURL', 'Retrieve a specific redirect URL for a project', getOrDeleteRedirectURLParams, async ({ project_id, url }) => {
+        //     const result = await this.getRedirectURL(project_id, url);
+        //     return this.formatResponse(result);
+        // });
 
         server.tool('updateRedirectURL', 'Update valid types for a redirect URL for a project', updateRedirectURLParams, async ({ project_id, url, valid_types }) => {
             const result = await this.updateRedirectURL(project_id, url, valid_types);
@@ -430,16 +430,16 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
         });
 
         // Add the getSecret tool
-        server.tool('getSecret', 'Retrieve a specific secret for a project', getSecretParams, async ({ project_id, secret_id }) => {
-            const result = await this.getSecret(project_id, secret_id);
-            return this.formatResponse(result);
-        });
+        // server.tool('getSecret', 'Retrieve a specific secret for a project', getSecretParams, async ({ project_id, secret_id }) => {
+        //     const result = await this.getSecret(project_id, secret_id);
+        //     return this.formatResponse(result);
+        // });
 
         // Add the getAllSecrets tool
-        server.tool('getAllSecrets', 'Retrieve all secrets for a project', getAllSecretsParams, async ({ project_id }) => {
-            const result = await this.getAllSecrets(project_id);
-            return this.formatResponse(result);
-        });
+        // server.tool('getAllSecrets', 'Retrieve all secrets for a project', getAllSecretsParams, async ({ project_id }) => {
+        //     const result = await this.getAllSecrets(project_id);
+        //     return this.formatResponse(result);
+        // });
 
         // Add the createSecret tool
         server.tool('createSecret', 'Create a new secret for a project', createSecretParams, async ({ project_id }) => {
@@ -455,12 +455,6 @@ export class WeatherAppMCP extends McpAgent<Env, unknown, AuthenticationContext>
 
         server.tool('createEmailTemplate', 'Creates an custom email template for the project.', createEmailTemplateParams, async ({ project_id, template_id, name, ...prebuiltCustomizationOptions}) => {
             const result = await this.createEmailTemplate(project_id, template_id, name, prebuiltCustomizationOptions);
-            return this.formatResponse(result);
-        });
-
-        // Add the getEmailTemplate tool
-        server.tool('getEmailTemplate', 'Retrieve a specific email template for a project', getEmailTemplateParams, async ({ project_id, template_id }) => {
-            const result = await this.getEmailTemplate(project_id, template_id);
             return this.formatResponse(result);
         });
 
