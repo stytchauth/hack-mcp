@@ -162,7 +162,9 @@ const ConsumerSDKConfigSchema = z.object({
     basic: z.object({
         bundle_ids: z.array(z.string()),
         create_new_users: z.boolean(),
-        domains: z.array(z.string()),
+        domains: z.array(z.string({
+            description: "A fully qualified domain name for the SDK to run on. Must contain http:// or https://. Localhost or 127.0.0.1 domains must contain a port number."
+        })),
         enabled: z.boolean(),
     }).optional(),
     biometrics: z.object({
@@ -226,7 +228,9 @@ const B2BSDKConfigSchema = z.object({
         allow_self_onboarding: z.boolean(),
         bundle_ids: z.array(z.string()),
         create_new_members: z.boolean(),
-        domains: z.array(z.string()),
+        domains: z.array(z.string({
+            description: "A fully qualified domain name for the SDK to run on. Must contain http:// or https://. Localhost or 127.0.0.1 domains must contain a port number."
+        })),
         enable_member_permissions: z.boolean(),
         enabled: z.boolean(),
     }).optional(),
