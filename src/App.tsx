@@ -1,12 +1,14 @@
 import './App.css';
 import CodeBlock from './CodeBlock'; // Import the new component
 
-const regularConnection = `npx mcp-remote ${window.origin}/mcp`
+const regularConnection = `npx mcp-remote ${window.origin}/mcp --host 127.0.0.1`
 const claudeDesktop = `"stytch-mcp": {
     "command": "npx",
     "args": [
         "mcp-remote",
-        "${window.origin}/mcp"
+        "${window.origin}/mcp",
+        "--host",
+        "127.0.0.1"
     ]
 }
 `;
